@@ -2,6 +2,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -45,7 +46,8 @@ func createURL(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	origURL, err := io.ReadAll(r.Body)
 	if err != nil {
-		fmt.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 	shortURL := generateShortKey()
 	short2orig[shortURL] = string(origURL)
@@ -66,14 +68,18 @@ func generateShortKey() string {
 }
 
 func getURL(w http.ResponseWriter, r *http.Request) {
-	origURL := getOrigURL(strings.TrimPrefix(r.URL.Path, "/"))
+	origURL, err := getOrigURL(strings.TrimPrefix(r.URL.Path, "/"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
 	w.Header().Set("Content-Type", "text/plain")
 	http.Redirect(w, r, origURL, http.StatusTemporaryRedirect)
 }
 
-func getOrigURL(id string) string {
+func getOrigURL(id string) (string, error) {
 	if origURL, ok := short2orig[id]; ok {
-		return origURL
+		return origURL, nil
 	}
-	return ""
+	return "", errors.New("bad id")
 }

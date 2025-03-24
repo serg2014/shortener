@@ -70,7 +70,7 @@ func generateShortKey() string {
 func getURL(w http.ResponseWriter, r *http.Request) {
 	origURL, err := getOrigURL(strings.TrimPrefix(r.URL.Path, "/"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain")

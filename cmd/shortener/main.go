@@ -33,23 +33,23 @@ func run() error {
 // функция webhook — обработчик HTTP-запроса
 func webhook(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" && r.Method == http.MethodPost {
-		createUrl(w, r)
+		createURL(w, r)
 	} else if r.Method == http.MethodGet {
-		getUrl(w, r)
+		getURL(w, r)
 	} else {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 	}
 }
 
-func createUrl(w http.ResponseWriter, r *http.Request) {
+func createURL(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
-	origUrl, err := io.ReadAll(r.Body)
+	origURL, err := io.ReadAll(r.Body)
 	if err != nil {
 		fmt.Println(err)
 	}
-	shortUrl := generateShortKey()
-	short2orig[shortUrl] = string(origUrl)
-	body := fmt.Sprintf("http://%s:%d/%s", host, port, shortUrl)
+	shortURL := generateShortKey()
+	short2orig[shortURL] = string(origURL)
+	body := fmt.Sprintf("http://%s:%d/%s", host, port, shortURL)
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(body))
 }
@@ -65,15 +65,15 @@ func generateShortKey() string {
 	return string(shortKey)
 }
 
-func getUrl(w http.ResponseWriter, r *http.Request) {
-	origUrl := getOrigUrl(strings.TrimPrefix(r.URL.Path, "/"))
+func getURL(w http.ResponseWriter, r *http.Request) {
+	origURL := getOrigURL(strings.TrimPrefix(r.URL.Path, "/"))
 	w.Header().Set("Content-Type", "text/plain")
-	http.Redirect(w, r, origUrl, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, origURL, http.StatusTemporaryRedirect)
 }
 
-func getOrigUrl(id string) string {
-	if origUrl, ok := short2orig[id]; ok {
-		return origUrl
+func getOrigURL(id string) string {
+	if origURL, ok := short2orig[id]; ok {
+		return origURL
 	}
 	return ""
 }

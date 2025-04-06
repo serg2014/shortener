@@ -7,8 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/serg2014/shortener/internal/app"
-	"github.com/serg2014/shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,11 +21,15 @@ func TestGetURL(t *testing.T) {
 		location    string
 		response    string
 	}
+	type kv struct {
+		key   string
+		value string
+	}
 	tests := []struct {
 		name    string
 		want    want
 		request *http.Request
-		store   *storage.Storage
+		store   kv
 	}{
 		{
 			name: "test #1",
@@ -37,7 +39,7 @@ func TestGetURL(t *testing.T) {
 				contentType: "text/plain; charset=utf-8",
 			},
 			request: httptest.NewRequest(http.MethodGet, "/abcdefgh", nil),
-			store:   storage.NewStorage(nil),
+			store:   kv{},
 		},
 		{
 			name: "test #2",
@@ -48,14 +50,17 @@ func TestGetURL(t *testing.T) {
 				contentType: "text/plain",
 			},
 			request: httptest.NewRequest(http.MethodGet, "/abcdefgh", nil),
-			store:   storage.NewStorage(map[string]string{"abcdefgh": "http://some.ru/123"}),
+			store:   kv{"abcdefgh", "http://some.ru/123"},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
-			getURL(w, test.request, test.store)
+			if test.store.key != "" {
+				store.Set(test.store.key, test.store.value)
+			}
+			GetURL(w, test.request)
 
 			// получаем ответ
 			res := w.Result()
@@ -76,35 +81,42 @@ func TestGetURL(t *testing.T) {
 	}
 }
 
-func Test_createURL(t *testing.T) {
+func TestCreateURL(t *testing.T) {
 	type want struct {
 		contentType string
 		statusCode  int
 		location    string
 		response    string
 	}
+	type kv struct {
+		key   string
+		value string
+	}
 	tests := []struct {
 		name    string
 		want    want
 		request *http.Request
-		store   *storage.Storage
+		store   kv
 	}{
 		{
 			name: "test #1",
 			want: want{
 				statusCode:  http.StatusCreated,
-				response:    urlTemplate(app.Host, app.Port, ""),
+				response:    urlTemplate(""),
 				contentType: "text/plain",
 			},
 			request: httptest.NewRequest(http.MethodPost, "/", strings.NewReader("http://some.ru/123")),
-			store:   storage.NewStorage(map[string]string{"aaaaaa": "http://some.ru/123"}),
+			store:   kv{"aaaaaa", "http://some.ru/123"},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
-			createURL(w, test.request, test.store)
+			if test.store.key != "" {
+				store.Set(test.store.key, test.store.value)
+			}
+			CreateURL(w, test.request)
 
 			// получаем ответ
 			res := w.Result()
@@ -121,7 +133,7 @@ func Test_createURL(t *testing.T) {
 
 			id, ok := strings.CutPrefix(string(resBody), test.want.response)
 			if assert.True(t, ok) {
-				_, ok := test.store.Get(id)
+				_, ok := store.Get(id)
 				assert.True(t, ok)
 			}
 			assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))

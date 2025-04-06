@@ -1,10 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
-	"github.com/serg2014/shortener/internal/app"
+	"github.com/go-chi/chi"
 	"github.com/serg2014/shortener/internal/handlers"
 )
 
@@ -17,7 +16,8 @@ func main() {
 
 // функция run будет полезна при инициализации зависимостей сервера перед запуском
 func run() error {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", handlers.Webhook)
-	return http.ListenAndServe(fmt.Sprintf(":%v", app.Port), mux)
+	r := chi.NewRouter()
+	r.Post("/", handlers.CreateURL) // POST /
+	r.Get("/", handlers.GetURL)     // GET /Fvdvgfgf
+	return http.ListenAndServe(":8080", r)
 }

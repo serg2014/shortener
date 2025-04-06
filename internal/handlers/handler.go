@@ -17,15 +17,15 @@ var store = storage.NewStorage(nil)
 // функция webhook — обработчик HTTP-запроса
 func Webhook(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" && r.Method == http.MethodPost {
-		createURL(w, r, store)
+		CreateURL(w, r)
 	} else if r.Method == http.MethodGet {
-		getURL(w, r, store)
+		GetURL(w, r)
 	} else {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 	}
 }
 
-func createURL(w http.ResponseWriter, r *http.Request, store *storage.Storage) {
+func CreateURL(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	origURL, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -35,12 +35,12 @@ func createURL(w http.ResponseWriter, r *http.Request, store *storage.Storage) {
 
 	shortURL := generateShortKey()
 	store.Set(shortURL, string(origURL))
-	body := urlTemplate(app.Host, app.Port, shortURL)
+	body := urlTemplate(shortURL)
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(body))
 }
 
-func urlTemplate(host string, port int, id string) string {
+func urlTemplate(id string) string {
 	return fmt.Sprintf("%s%s", app.URL(), id)
 }
 
@@ -55,7 +55,7 @@ func generateShortKey() string {
 	return string(shortKey)
 }
 
-func getURL(w http.ResponseWriter, r *http.Request, store *storage.Storage) {
+func GetURL(w http.ResponseWriter, r *http.Request) {
 	origURL, err := getOrigURL(store, strings.TrimPrefix(r.URL.Path, "/"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

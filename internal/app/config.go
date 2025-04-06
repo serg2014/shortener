@@ -7,6 +7,6 @@ const (
 	Host = "localhost"
 )
 
-func Url() string {
+func URL() string {
 	return fmt.Sprintf("http://%s:%d/", Host, Port)
 }

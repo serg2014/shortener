@@ -41,7 +41,7 @@ func createURL(w http.ResponseWriter, r *http.Request, store *storage.Storage) {
 }
 
 func urlTemplate(host string, port int, id string) string {
-	return fmt.Sprintf("http://%s:%d/%s", host, port, id)
+	return fmt.Sprintf("%s%s", app.Url(), id)
 }
 
 func generateShortKey() string {

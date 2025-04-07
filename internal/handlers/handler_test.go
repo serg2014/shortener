@@ -88,7 +88,19 @@ func TestGetURL(t *testing.T) {
 			//  на этот код полчил оштбку internal/handlers/handler_test.go:89:32: response body must be closed
 			// resp, resBody := testRequest(t, ts, req)
 
-			resp, data := testRequest(t, ts, req)
+			//resp, data := testRequest(t, ts, req)
+			//====
+			client := ts.Client()
+			client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			//=====
 			// проверяем код ответа
 			assert.Equal(t, test.want.statusCode, resp.StatusCode)
 
@@ -96,7 +108,7 @@ func TestGetURL(t *testing.T) {
 				assert.Equal(t, test.want.location, resp.Header.Get("Location"))
 			}
 
-			assert.Equal(t, test.want.response, data)
+			assert.Equal(t, test.want.response, string(respBody))
 			assert.Equal(t, test.want.contentType, resp.Header.Get("Content-Type"))
 		})
 	}
@@ -146,7 +158,19 @@ func TestCreateURL(t *testing.T) {
 			req, err := http.NewRequest(test.reqParam.method, ts.URL+test.reqParam.url, test.reqParam.body)
 			require.NoError(t, err)
 			// получаем ответ
-			resp, data := testRequest(t, ts, req)
+			//resp, data := testRequest(t, ts, req)
+			//====
+			client := ts.Client()
+			client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			//=====
 			// проверяем код ответа
 			assert.Equal(t, test.want.statusCode, resp.StatusCode)
 
@@ -154,7 +178,7 @@ func TestCreateURL(t *testing.T) {
 				assert.Equal(t, test.want.location, resp.Header.Get("Location"))
 			}
 
-			id, ok := strings.CutPrefix(data, test.want.response)
+			id, ok := strings.CutPrefix(string(respBody), test.want.response)
 			if assert.True(t, ok) {
 				_, ok := store.Get(id)
 				assert.True(t, ok)

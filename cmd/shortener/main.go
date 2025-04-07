@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 
@@ -17,5 +18,8 @@ func main() {
 
 // функция run будет полезна при инициализации зависимостей сервера перед запуском
 func run() error {
-	return http.ListenAndServe(fmt.Sprintf("%s:%d", app.Host, app.Port), handlers.Router())
+	flag.Var(app.NewConfig, "a", "Net address host:port")
+	flag.StringVar(&app.NewURL, "b", "", "Like http://ya.ru")
+	flag.Parse()
+	return http.ListenAndServe(fmt.Sprintf("%s:%d", app.NewConfig.Host, app.NewConfig.Port), handlers.Router())
 }

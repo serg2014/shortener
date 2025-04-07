@@ -32,6 +32,9 @@ func (c *config) Set(flagValue string) error {
 		return err
 	}
 	c.Host = hp[0]
+	if c.Host == "" {
+		c.Host = "localhost"
+	}
 	c.Port = port
 	return nil
 }

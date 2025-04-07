@@ -11,10 +11,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//func TestcreateURL(t *testing.T) {
-//}
+// func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io.Reader) (*http.Response, string) {
+func testRequest(t *testing.T, ts *httptest.Server, req *http.Request) (*http.Response, string) {
+	//req, err := http.NewRequest(method, ts.URL+path, body)
+	//require.NoError(t, err)
+
+	client := ts.Client()
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	return resp, string(respBody)
+}
 
 func TestGetURL(t *testing.T) {
+	ts := httptest.NewServer(Router())
+	defer ts.Close()
+
 	type want struct {
 		contentType string
 		statusCode  int
@@ -25,63 +44,66 @@ func TestGetURL(t *testing.T) {
 		key   string
 		value string
 	}
+	type reqParam struct {
+		method string
+		url    string
+		body   io.Reader
+	}
+
 	tests := []struct {
-		name    string
-		want    want
-		request *http.Request
-		store   kv
+		name     string
+		want     want
+		reqParam reqParam
+		store    kv
 	}{
 		{
-			name: "test #1",
+			name: "test 1",
 			want: want{
 				statusCode:  http.StatusBadRequest,
 				response:    "bad id\n",
 				contentType: "text/plain; charset=utf-8",
 			},
-			request: httptest.NewRequest(http.MethodGet, "/abcdefgh", nil),
-			store:   kv{},
+			reqParam: reqParam{http.MethodGet, "/abcdef12", nil},
+			store:    kv{},
 		},
 		{
-			name: "test #2",
+			name: "test 2",
 			want: want{
 				statusCode:  http.StatusTemporaryRedirect,
 				location:    "http://some.ru/123",
 				response:    "",
 				contentType: "text/plain",
 			},
-			request: httptest.NewRequest(http.MethodGet, "/abcdefgh", nil),
-			store:   kv{"abcdefgh", "http://some.ru/123"},
+			reqParam: reqParam{http.MethodGet, "/abcdefgh", nil},
+			store:    kv{"abcdefgh", "http://some.ru/123"},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			// создаём новый Recorder
-			w := httptest.NewRecorder()
 			if test.store.key != "" {
 				store.Set(test.store.key, test.store.value)
 			}
-			GetURL(w, test.request)
-
-			// получаем ответ
-			res := w.Result()
-			// проверяем код ответа
-			assert.Equal(t, test.want.statusCode, res.StatusCode)
-
-			if test.want.location != "" {
-				assert.Equal(t, test.want.location, res.Header.Get("Location"))
-			}
-			// получаем и проверяем тело запроса
-			defer res.Body.Close()
-			resBody, err := io.ReadAll(res.Body)
+			req, err := http.NewRequest(test.reqParam.method, ts.URL+test.reqParam.url, test.reqParam.body)
 			require.NoError(t, err)
 
-			assert.Equal(t, test.want.response, string(resBody))
-			assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
+			resp, resBody := testRequest(t, ts, req)
+			// проверяем код ответа
+			assert.Equal(t, test.want.statusCode, resp.StatusCode)
+
+			if test.want.location != "" {
+				assert.Equal(t, test.want.location, resp.Header.Get("Location"))
+			}
+
+			assert.Equal(t, test.want.response, resBody)
+			assert.Equal(t, test.want.contentType, resp.Header.Get("Content-Type"))
 		})
 	}
 }
 
 func TestCreateURL(t *testing.T) {
+	ts := httptest.NewServer(Router())
+	defer ts.Close()
+
 	type want struct {
 		contentType string
 		statusCode  int
@@ -92,11 +114,16 @@ func TestCreateURL(t *testing.T) {
 		key   string
 		value string
 	}
+	type reqParam struct {
+		method string
+		url    string
+		body   io.Reader
+	}
 	tests := []struct {
-		name    string
-		want    want
-		request *http.Request
-		store   kv
+		name     string
+		want     want
+		reqParam reqParam
+		store    kv
 	}{
 		{
 			name: "test #1",
@@ -105,38 +132,32 @@ func TestCreateURL(t *testing.T) {
 				response:    urlTemplate(""),
 				contentType: "text/plain",
 			},
-			request: httptest.NewRequest(http.MethodPost, "/", strings.NewReader("http://some.ru/123")),
-			store:   kv{"aaaaaa", "http://some.ru/123"},
+			reqParam: reqParam{http.MethodPost, "/", strings.NewReader("http://some.ru/123")},
+			store:    kv{"aaaaaa", "http://some.ru/123"},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			// создаём новый Recorder
-			w := httptest.NewRecorder()
 			if test.store.key != "" {
 				store.Set(test.store.key, test.store.value)
 			}
-			CreateURL(w, test.request)
-
+			req, err := http.NewRequest(test.reqParam.method, ts.URL+test.reqParam.url, test.reqParam.body)
+			require.NoError(t, err)
 			// получаем ответ
-			res := w.Result()
+			resp, resBody := testRequest(t, ts, req)
 			// проверяем код ответа
-			assert.Equal(t, test.want.statusCode, res.StatusCode)
+			assert.Equal(t, test.want.statusCode, resp.StatusCode)
 
 			if test.want.location != "" {
-				assert.Equal(t, test.want.location, res.Header.Get("Location"))
+				assert.Equal(t, test.want.location, resp.Header.Get("Location"))
 			}
-			// получаем и проверяем тело запроса
-			defer res.Body.Close()
-			resBody, err := io.ReadAll(res.Body)
-			require.NoError(t, err)
 
 			id, ok := strings.CutPrefix(string(resBody), test.want.response)
 			if assert.True(t, ok) {
 				_, ok := store.Get(id)
 				assert.True(t, ok)
 			}
-			assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
+			assert.Equal(t, test.want.contentType, resp.Header.Get("Content-Type"))
 		})
 	}
 }

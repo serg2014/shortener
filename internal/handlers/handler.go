@@ -6,8 +6,8 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
-	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/serg2014/shortener/internal/app"
 	"github.com/serg2014/shortener/internal/storage"
 )
@@ -56,7 +56,8 @@ func generateShortKey() string {
 }
 
 func GetURL(w http.ResponseWriter, r *http.Request) {
-	origURL, err := getOrigURL(store, strings.TrimPrefix(r.URL.Path, "/"))
+	id := chi.URLParam(r, "key")
+	origURL, err := getOrigURL(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -65,9 +66,16 @@ func GetURL(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, origURL, http.StatusTemporaryRedirect)
 }
 
-func getOrigURL(store *storage.Storage, id string) (string, error) {
+func getOrigURL(id string) (string, error) {
 	if origURL, ok := store.Get(id); ok {
 		return origURL, nil
 	}
 	return "", errors.New("bad id")
+}
+
+func Router() chi.Router {
+	r := chi.NewRouter()
+	r.Post("/", CreateURL)  // POST /
+	r.Get("/{key}", GetURL) // GET /Fvdvgfgf
+	return r
 }

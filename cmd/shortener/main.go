@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/serg2014/shortener/internal/app"
 	"github.com/serg2014/shortener/internal/handlers"
@@ -21,5 +22,10 @@ func run() error {
 	flag.Var(app.NewConfig, "a", "Net address host:port")
 	flag.StringVar(&app.NewURL, "b", "", "Like http://ya.ru")
 	flag.Parse()
+	if app.NewURL != "" {
+		if !strings.HasSuffix(app.NewURL, "/") {
+			app.NewURL = app.NewURL + "/"
+		}
+	}
 	return http.ListenAndServe(fmt.Sprintf("%s:%d", app.NewConfig.Host, app.NewConfig.Port), handlers.Router())
 }

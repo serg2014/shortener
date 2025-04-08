@@ -22,7 +22,7 @@ func main() {
 func run() error {
 
 	flag.Var(app.NewConfig, "a", "Net address host:port")
-	flag.StringVar(&app.NewURL, "b", "", "Like http://ya.ru")
+	flag.StringVar(&app.BaseURL, "b", "", "Like http://ya.ru")
 	flag.Parse()
 
 	if envRunAddr := os.Getenv("SERVER_ADDRESS"); envRunAddr != "" {
@@ -33,12 +33,12 @@ func run() error {
 	}
 
 	if baseURL := os.Getenv("BASE_URL"); baseURL != "" {
-		app.NewURL = baseURL
+		app.BaseURL = baseURL
 	}
 
-	if app.NewURL != "" {
-		if !strings.HasSuffix(app.NewURL, "/") {
-			app.NewURL = app.NewURL + "/"
+	if app.BaseURL != "" {
+		if !strings.HasSuffix(app.BaseURL, "/") {
+			app.BaseURL = app.BaseURL + "/"
 		}
 	}
 	return http.ListenAndServe(fmt.Sprintf("%s:%d", app.NewConfig.Host, app.NewConfig.Port), handlers.Router())

@@ -17,7 +17,7 @@ var NewConfig = &config{
 	Port: 8080,
 }
 
-var NewURL = ""
+var BaseURL = ""
 
 func (c *config) String() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
@@ -40,8 +40,8 @@ func (c *config) Set(flagValue string) error {
 }
 
 func URL() string {
-	if NewURL != "" {
-		return NewURL
+	if BaseURL != "" {
+		return BaseURL
 	}
 	return fmt.Sprintf("http://%s:%d/", NewConfig.Host, NewConfig.Port)
 }

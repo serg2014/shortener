@@ -1,9 +1,9 @@
 package config
 
 import (
-	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 
@@ -26,15 +26,16 @@ func (c *config) String() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }
 func (c *config) Set(flagValue string) error {
-	hp := strings.Split(flagValue, ":")
-	if len(hp) != 2 {
-		return errors.New("need address in a form host:port")
-	}
-	port, err := strconv.ParseUint(hp[1], 10, 32)
+	host, portStr, err := net.SplitHostPort(flagValue)
 	if err != nil {
 		return err
 	}
-	c.Host = hp[0]
+
+	port, err := strconv.ParseUint(portStr, 10, 32)
+	if err != nil {
+		return err
+	}
+	c.Host = host
 	if c.Host == "" {
 		c.Host = "localhost"
 	}
@@ -55,7 +56,7 @@ func (c *config) InitConfig() error {
 	flag.Parse()
 
 	var envConfig config
-	err := env.Parse(envConfig)
+	err := env.Parse(&envConfig)
 	if err != nil {
 		return err
 	}

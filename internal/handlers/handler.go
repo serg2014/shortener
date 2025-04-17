@@ -30,7 +30,7 @@ func CreateURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func urlTemplate(id string) string {
-	return fmt.Sprintf("%s%s", config.URL(), id)
+	return fmt.Sprintf("%s%s", config.NewConfig.URL(), id)
 }
 
 func generateShortKey() string {

@@ -9,11 +9,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/serg2014/shortener/internal/app"
+	"github.com/serg2014/shortener/internal/config"
 )
 
 func main() {
-	endpoint := app.URL()
+	endpoint := config.URL()
 	// контейнер данных для запроса
 	data := url.Values{}
 	// приглашение в консоли

@@ -12,6 +12,7 @@
 *.out
 
 # Binaries
+cmd/client/main
 cmd/shortener/main
 cmd/shortener/shortener
 

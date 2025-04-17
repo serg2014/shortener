@@ -8,22 +8,11 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/serg2014/shortener/internal/app"
+	"github.com/serg2014/shortener/internal/config"
 	"github.com/serg2014/shortener/internal/storage"
 )
 
 var store = storage.NewStorage(nil)
-
-// функция webhook — обработчик HTTP-запроса
-func Webhook(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/" && r.Method == http.MethodPost {
-		CreateURL(w, r)
-	} else if r.Method == http.MethodGet {
-		GetURL(w, r)
-	} else {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-	}
-}
 
 func CreateURL(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
@@ -41,7 +30,7 @@ func CreateURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func urlTemplate(id string) string {
-	return fmt.Sprintf("%s%s", app.URL(), id)
+	return fmt.Sprintf("%s%s", config.URL(), id)
 }
 
 func generateShortKey() string {

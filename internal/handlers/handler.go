@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/rand"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/serg2014/shortener/internal/app"
 	"github.com/serg2014/shortener/internal/config"
 	"github.com/serg2014/shortener/internal/storage"
 )
@@ -22,10 +22,8 @@ func CreateURL(store storage.Storager) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
-		shortURL := generateShortKey()
-		store.Set(shortURL, string(origURL))
-		body := urlTemplate(shortURL)
+		shortID := app.GenerateShortKey(store, string(origURL))
+		body := urlTemplate(shortID)
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(body))
 	}
@@ -35,23 +33,12 @@ func urlTemplate(id string) string {
 	return fmt.Sprintf("%s%s", config.NewConfig.URL(), id)
 }
 
-func generateShortKey() string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	const keyLength = 8
-
-	shortKey := make([]byte, keyLength)
-	for i := range shortKey {
-		shortKey[i] = charset[rand.Intn(len(charset))]
-	}
-	return string(shortKey)
-}
-
 func GetURL(store storage.Storager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "key")
-		origURL, err := getOrigURL(store, id)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		origURL, ok := store.Get(id)
+		if !ok {
+			http.Error(w, "bad id", http.StatusBadRequest)
 			return
 		}
 		w.Header().Set("Content-Type", "text/plain")

@@ -6,6 +6,7 @@ import (
 
 	"github.com/serg2014/shortener/internal/config"
 	"github.com/serg2014/shortener/internal/handlers"
+	"github.com/serg2014/shortener/internal/storage"
 )
 
 func main() {
@@ -20,5 +21,6 @@ func run() error {
 		return err
 	}
 
-	return http.ListenAndServe(fmt.Sprintf("%s:%d", config.NewConfig.Host, config.NewConfig.Port), handlers.Router())
+	var store = storage.NewStorage(nil)
+	return http.ListenAndServe(fmt.Sprintf("%s:%d", config.NewConfig.Host, config.NewConfig.Port), handlers.Router(store))
 }

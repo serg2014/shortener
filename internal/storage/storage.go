@@ -1,21 +1,26 @@
 package storage
 
-type Storage struct {
+type storage struct {
 	short2orig map[string]string
 }
 
-func NewStorage(data map[string]string) *Storage {
+func NewStorage(data map[string]string) *storage {
 	if data == nil {
-		return &Storage{short2orig: make(map[string]string)}
+		return &storage{short2orig: make(map[string]string)}
 	}
-	return &Storage{short2orig: data}
+	return &storage{short2orig: data}
 }
 
-func (s *Storage) Get(key string) (string, bool) {
+func (s *storage) Get(key string) (string, bool) {
 	v, ok := s.short2orig[key]
 	return v, ok
 }
 
-func (s *Storage) Set(key string, value string) {
+func (s *storage) Set(key string, value string) {
 	s.short2orig[key] = value
+}
+
+type Storager interface {
+	Get(key string) (string, bool)
+	Set(key string, value string)
 }

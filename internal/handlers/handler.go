@@ -12,21 +12,23 @@ import (
 	"github.com/serg2014/shortener/internal/storage"
 )
 
-var store = storage.NewStorage(nil)
+//var store = storage.NewStorage(nil)
 
-func CreateURL(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain")
-	origURL, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+func CreateURL(store storage.Storager) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		origURL, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		shortURL := generateShortKey()
+		store.Set(shortURL, string(origURL))
+		body := urlTemplate(shortURL)
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte(body))
 	}
-
-	shortURL := generateShortKey()
-	store.Set(shortURL, string(origURL))
-	body := urlTemplate(shortURL)
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(body))
 }
 
 func urlTemplate(id string) string {
@@ -44,27 +46,29 @@ func generateShortKey() string {
 	return string(shortKey)
 }
 
-func GetURL(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "key")
-	origURL, err := getOrigURL(id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+func GetURL(store storage.Storager) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "key")
+		origURL, err := getOrigURL(store, id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		http.Redirect(w, r, origURL, http.StatusTemporaryRedirect)
 	}
-	w.Header().Set("Content-Type", "text/plain")
-	http.Redirect(w, r, origURL, http.StatusTemporaryRedirect)
 }
 
-func getOrigURL(id string) (string, error) {
+func getOrigURL(store storage.Storager, id string) (string, error) {
 	if origURL, ok := store.Get(id); ok {
 		return origURL, nil
 	}
 	return "", errors.New("bad id")
 }
 
-func Router() chi.Router {
+func Router(store storage.Storager) chi.Router {
 	r := chi.NewRouter()
-	r.Post("/", CreateURL)  // POST /
-	r.Get("/{key}", GetURL) // GET /Fvdvgfgf
+	r.Post("/", CreateURL(store))  // POST /
+	r.Get("/{key}", GetURL(store)) // GET /Fvdvgfgf
 	return r
 }

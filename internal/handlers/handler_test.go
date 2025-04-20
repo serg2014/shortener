@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/serg2014/shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +32,8 @@ func testRequest(t *testing.T, ts *httptest.Server, req *http.Request) (*http.Re
 }
 
 func TestGetURL(t *testing.T) {
-	ts := httptest.NewServer(Router())
+	store := storage.NewStorage(nil)
+	ts := httptest.NewServer(Router(store))
 	defer ts.Close()
 
 	type want struct {
@@ -115,7 +117,8 @@ func TestGetURL(t *testing.T) {
 }
 
 func TestCreateURL(t *testing.T) {
-	ts := httptest.NewServer(Router())
+	store := storage.NewStorage(nil)
+	ts := httptest.NewServer(Router(store))
 	defer ts.Close()
 
 	type want struct {

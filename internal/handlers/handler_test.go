@@ -155,9 +155,6 @@ func TestCreateURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if test.store.key != "" {
-				store.Set(test.store.key, test.store.value)
-			}
 			req, err := http.NewRequest(test.reqParam.method, ts.URL+test.reqParam.url, test.reqParam.body)
 			require.NoError(t, err)
 			// получаем ответ
@@ -177,14 +174,11 @@ func TestCreateURL(t *testing.T) {
 			// проверяем код ответа
 			assert.Equal(t, test.want.statusCode, resp.StatusCode)
 
-			if test.want.location != "" {
-				assert.Equal(t, test.want.location, resp.Header.Get("Location"))
-			}
-
 			id, ok := strings.CutPrefix(string(respBody), test.want.response)
 			if assert.True(t, ok) {
-				_, ok := store.Get(id)
+				val, ok := store.Get(id)
 				assert.True(t, ok)
+				assert.Equal(t, test.store.value, val)
 			}
 			assert.Equal(t, test.want.contentType, resp.Header.Get("Content-Type"))
 		})

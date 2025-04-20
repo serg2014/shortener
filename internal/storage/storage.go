@@ -1,7 +1,10 @@
 package storage
 
+import "sync"
+
 type storage struct {
 	short2orig map[string]string
+	m          sync.RWMutex
 }
 
 func NewStorage(data map[string]string) *storage {
@@ -12,11 +15,15 @@ func NewStorage(data map[string]string) *storage {
 }
 
 func (s *storage) Get(key string) (string, bool) {
+	s.m.RLock()
+	defer s.m.RUnlock()
 	v, ok := s.short2orig[key]
 	return v, ok
 }
 
 func (s *storage) Set(key string, value string) {
+	s.m.Lock()
+	defer s.m.Unlock()
 	s.short2orig[key] = value
 }
 

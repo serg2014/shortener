@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	endpoint := config.NewConfig.URL()
+	endpoint := config.Config.URL()
 	// контейнер данных для запроса
 	data := url.Values{}
 	// приглашение в консоли

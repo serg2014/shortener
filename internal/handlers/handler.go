@@ -30,7 +30,7 @@ func CreateURL(store storage.Storager) http.HandlerFunc {
 }
 
 func urlTemplate(id string) string {
-	return fmt.Sprintf("%s%s", config.NewConfig.URL(), id)
+	return fmt.Sprintf("%s%s", config.Config.URL(), id)
 }
 
 func GetURL(store storage.Storager) http.HandlerFunc {

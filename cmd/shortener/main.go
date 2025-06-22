@@ -16,11 +16,11 @@ func main() {
 }
 
 func run() error {
-	err := config.NewConfig.InitConfig()
+	err := config.Config.InitConfig()
 	if err != nil {
 		return err
 	}
 
 	var store = storage.NewStorage(nil)
-	return http.ListenAndServe(fmt.Sprintf("%s:%d", config.NewConfig.Host, config.NewConfig.Port), handlers.Router(store))
+	return http.ListenAndServe(fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port), handlers.Router(store))
 }

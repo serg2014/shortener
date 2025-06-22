@@ -16,7 +16,7 @@ type config struct {
 	BaseURL string `env:"BASE_URL"`
 }
 
-var NewConfig = &config{
+var Config = &config{
 	Host:    "localhost",
 	Port:    8080,
 	BaseURL: "",
@@ -47,7 +47,7 @@ func (c *config) URL() string {
 	if c.BaseURL != "" {
 		return c.BaseURL
 	}
-	return fmt.Sprintf("http://%s:%d/", NewConfig.Host, NewConfig.Port)
+	return fmt.Sprintf("http://%s:%d/", Config.Host, Config.Port)
 }
 
 func (c *config) InitConfig() error {

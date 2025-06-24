@@ -11,15 +11,17 @@ import (
 )
 
 type config struct {
-	Host    string `env:"SERVER_ADDRESS"`
-	Port    uint64
-	BaseURL string `env:"BASE_URL"`
+	Host     string `env:"SERVER_ADDRESS"`
+	Port     uint64
+	BaseURL  string `env:"BASE_URL"`
+	LogLevel string `env:"LOG_LEVEL"`
 }
 
 var Config = &config{
-	Host:    "localhost",
-	Port:    8080,
-	BaseURL: "",
+	Host:     "localhost",
+	Port:     8080,
+	BaseURL:  "",
+	LogLevel: "",
 }
 
 func (c *config) String() string {
@@ -53,6 +55,7 @@ func (c *config) URL() string {
 func (c *config) InitConfig() error {
 	flag.Var(c, "a", "Net address host:port")
 	flag.StringVar(&c.BaseURL, "b", "", "Like http://ya.ru")
+	flag.StringVar(&c.LogLevel, "l", "info", "log level")
 	flag.Parse()
 
 	var envConfig config
@@ -75,6 +78,10 @@ func (c *config) InitConfig() error {
 		if !strings.HasSuffix(c.BaseURL, "/") {
 			c.BaseURL = c.BaseURL + "/"
 		}
+	}
+
+	if envConfig.LogLevel != "" {
+		c.LogLevel = envConfig.LogLevel
 	}
 
 	return nil

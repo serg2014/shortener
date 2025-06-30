@@ -52,7 +52,7 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 
 		shortID := app.GenerateShortKey(store, req.URL)
 		resp := models.Response{
-			Result: shortID,
+			Result: urlTemplate(shortID),
 		}
 
 		// порядок важен

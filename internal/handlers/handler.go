@@ -44,13 +44,13 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if req.Url == "" {
+		if req.URL == "" {
 			logger.Log.Debug("empty url")
 			http.Error(w, "empty url", http.StatusBadRequest)
 			return
 		}
 
-		shortID := app.GenerateShortKey(store, req.Url)
+		shortID := app.GenerateShortKey(store, req.URL)
 		resp := models.Response{
 			Result: shortID,
 		}

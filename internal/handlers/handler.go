@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,7 +11,9 @@ import (
 	"github.com/serg2014/shortener/internal/app"
 	"github.com/serg2014/shortener/internal/config"
 	"github.com/serg2014/shortener/internal/logger"
+	"github.com/serg2014/shortener/internal/models"
 	"github.com/serg2014/shortener/internal/storage"
+	"go.uber.org/zap"
 )
 
 //var store = storage.NewStorage(nil)
@@ -27,6 +30,40 @@ func CreateURL(store storage.Storager) http.HandlerFunc {
 		body := urlTemplate(shortID)
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(body))
+	}
+}
+
+// TODO copy paste
+func CreateURL2(store storage.Storager) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		var req models.Request
+		dec := json.NewDecoder(r.Body)
+		if err := dec.Decode(&req); err != nil {
+			logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if req.Url == "" {
+			logger.Log.Debug("empty url")
+			http.Error(w, "empty url", http.StatusBadRequest)
+			return
+		}
+
+		shortID := app.GenerateShortKey(store, req.Url)
+		resp := models.Response{
+			Result: shortID,
+		}
+
+		// порядок важен
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		// сериализуем ответ сервера
+		enc := json.NewEncoder(w)
+		if err := enc.Encode(resp); err != nil {
+			logger.Log.Debug("error encoding response", zap.Error(err))
+			return
+		}
 	}
 }
 
@@ -62,6 +99,7 @@ func Router(store storage.Storager) chi.Router {
 
 	r.Post("/", CreateURL(store))  // POST /
 	r.Get("/{key}", GetURL(store)) // GET /Fvdvgfgf
+	r.Post("/api/shorten", CreateURL2(store))
 	//r.Post("/", logger.RequestLogger(CreateURL(store)))  // POST /
 	//r.Get("/{key}", logger.RequestLogger(GetURL(store))) // GET /Fvdvgfgf
 	return r

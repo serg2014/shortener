@@ -154,7 +154,7 @@ func TestCreateURL(t *testing.T) {
 			name: "test #1",
 			want: want{
 				statusCode:  http.StatusCreated,
-				response:    handlers.UrlTemplate(""),
+				response:    handlers.URLTemplate(""),
 				contentType: "text/plain",
 			},
 			reqParam: reqParam{http.MethodPost, "/", strings.NewReader("http://some.ru/123")},

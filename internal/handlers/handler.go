@@ -27,7 +27,7 @@ func CreateURL(store storage.Storager) http.HandlerFunc {
 			return
 		}
 		shortID := app.GenerateShortKey(store, string(origURL))
-		body := UrlTemplate(shortID)
+		body := URLTemplate(shortID)
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(body))
 	}
@@ -52,7 +52,7 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 
 		shortID := app.GenerateShortKey(store, req.URL)
 		resp := models.Response{
-			Result: UrlTemplate(shortID),
+			Result: URLTemplate(shortID),
 		}
 
 		// порядок важен
@@ -67,7 +67,7 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 	}
 }
 
-func UrlTemplate(id string) string {
+func URLTemplate(id string) string {
 	return fmt.Sprintf("%s%s", config.Config.URL(), id)
 }
 

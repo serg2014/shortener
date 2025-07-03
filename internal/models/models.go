@@ -7,3 +7,5 @@ type Request struct {
 type Response struct {
 	Result string `json:"result"`
 }
+
+// TODO добавить тесты

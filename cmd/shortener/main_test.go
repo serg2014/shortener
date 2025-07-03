@@ -1,4 +1,4 @@
-package handlers
+package main
 
 import (
 	"io"
@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/serg2014/shortener/internal/handlers"
 	"github.com/serg2014/shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,9 +48,10 @@ func TestGetURL(t *testing.T) {
 		value string
 	}
 	type reqParam struct {
-		method string
-		url    string
-		body   io.Reader
+		method     string
+		url        string
+		body       io.Reader
+		setHeaders map[string]string
 	}
 
 	tests := []struct {
@@ -65,7 +67,7 @@ func TestGetURL(t *testing.T) {
 				response:    "bad id\n",
 				contentType: "text/plain; charset=utf-8",
 			},
-			reqParam: reqParam{http.MethodGet, "/abcdef12", nil},
+			reqParam: reqParam{http.MethodGet, "/abcdef12", nil, map[string]string{"Accept-Encoding": ""}},
 			store:    kv{},
 		},
 		{
@@ -76,7 +78,7 @@ func TestGetURL(t *testing.T) {
 				response:    "",
 				contentType: "text/plain",
 			},
-			reqParam: reqParam{http.MethodGet, "/abcdefgh", nil},
+			reqParam: reqParam{http.MethodGet, "/abcdefgh", nil, map[string]string{"Accept-Encoding": ""}},
 			store:    kv{"abcdefgh", "http://some.ru/123"},
 		},
 	}
@@ -87,7 +89,13 @@ func TestGetURL(t *testing.T) {
 			}
 			req, err := http.NewRequest(test.reqParam.method, ts.URL+test.reqParam.url, test.reqParam.body)
 			require.NoError(t, err)
-			//  на этот код полчил оштбку internal/handlers/handler_test.go:89:32: response body must be closed
+			if test.reqParam.setHeaders != nil {
+				for k, v := range test.reqParam.setHeaders {
+					req.Header.Set(k, v)
+				}
+
+			}
+			//  на этот код полчил ошибку internal/handlers/handler_test.go:89:32: response body must be closed
 			// resp, resBody := testRequest(t, ts, req)
 
 			//resp, data := testRequest(t, ts, req)
@@ -146,7 +154,7 @@ func TestCreateURL(t *testing.T) {
 			name: "test #1",
 			want: want{
 				statusCode:  http.StatusCreated,
-				response:    urlTemplate(""),
+				response:    handlers.URLTemplate(""),
 				contentType: "text/plain",
 			},
 			reqParam: reqParam{http.MethodPost, "/", strings.NewReader("http://some.ru/123")},

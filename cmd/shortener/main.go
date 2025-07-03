@@ -84,6 +84,10 @@ func run() error {
 		return err
 	}
 	logger.Log.Info("Running server", zap.String("address", config.Config.String()))
-	var store = storage.NewStorage(nil)
+	//var store = storage.NewStorage(nil)
+	store, err := storage.NewStorageData(config.Config.FileStoragePath)
+	if err != nil {
+		return err
+	}
 	return http.ListenAndServe(fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port), Router(store))
 }

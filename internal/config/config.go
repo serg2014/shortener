@@ -87,5 +87,9 @@ func (c *config) InitConfig() error {
 		c.LogLevel = envConfig.LogLevel
 	}
 
+	if envConfig.FileStoragePath != "" {
+		c.FileStoragePath = envConfig.FileStoragePath
+	}
+
 	return nil
 }

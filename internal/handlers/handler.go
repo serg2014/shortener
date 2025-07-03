@@ -90,17 +90,3 @@ func getOrigURL(store storage.Storager, id string) (string, error) {
 	}
 	return "", errors.New("bad id")
 }
-
-// func Router(store storage.Storager, logger func(http.HandlerFunc) http.HandlerFunc) chi.Router {
-func Router(store storage.Storager) chi.Router {
-	r := chi.NewRouter()
-	//r.Use(middleware.Logger)
-	r.Use(logger.WithLogging)
-
-	r.Post("/", CreateURL(store))  // POST /
-	r.Get("/{key}", GetURL(store)) // GET /Fvdvgfgf
-	r.Post("/api/shorten", CreateURL2(store))
-	//r.Post("/", logger.RequestLogger(CreateURL(store)))  // POST /
-	//r.Get("/{key}", logger.RequestLogger(GetURL(store))) // GET /Fvdvgfgf
-	return r
-}

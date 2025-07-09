@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/serg2014/shortener/internal/app"
@@ -61,7 +64,7 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 		// сериализуем ответ сервера
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(resp); err != nil {
-			logger.Log.Debug("error encoding response", zap.Error(err))
+			logger.Log.Error("error encoding response", zap.Error(err))
 			return
 		}
 	}
@@ -89,4 +92,18 @@ func getOrigURL(store storage.Storager, id string) (string, error) {
 		return origURL, nil
 	}
 	return "", errors.New("bad id")
+}
+
+func Ping(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if db == nil {
+			http.Error(w, "do not use db", http.StatusInternalServerError)
+		} else {
+			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+			defer cancel()
+			if err := db.PingContext(ctx); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+		}
+	}
 }

@@ -29,9 +29,11 @@ func NewStorageData(filePath string) (*storage, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	scanner := bufio.NewScanner(file)
 	var item item
 	data := make(short2orig)
+	// TODO если строка будет длинной получим ошибку
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		err := json.Unmarshal(line, &item)

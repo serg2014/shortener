@@ -7,7 +7,10 @@ import (
 
 	"go.uber.org/zap"
 
+	"database/sql"
+
 	"github.com/go-chi/chi/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/serg2014/shortener/internal/config"
 	"github.com/serg2014/shortener/internal/handlers"
 	"github.com/serg2014/shortener/internal/logger"
@@ -60,7 +63,7 @@ func gzipMiddleware(h http.Handler) http.Handler {
 	})
 }
 
-func Router(store storage.Storager) chi.Router {
+func Router(store storage.Storager, db *sql.DB) chi.Router {
 	r := chi.NewRouter()
 	//r.Use(middleware.Logger)
 	r.Use(logger.WithLogging)
@@ -71,6 +74,7 @@ func Router(store storage.Storager) chi.Router {
 	r.Post("/api/shorten", handlers.CreateURL2(store))
 	//r.Post("/", logger.RequestLogger(CreateURL(store)))  // POST /
 	//r.Get("/{key}", logger.RequestLogger(GetURL(store))) // GET /Fvdvgfgf
+	r.Get("/ping", handlers.Ping(db))
 	return r
 }
 
@@ -83,11 +87,24 @@ func run() error {
 	if err := logger.Initialize(config.Config.LogLevel); err != nil {
 		return err
 	}
+
+	// dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
+	//  `localhost`, `video`, `XXXXXXXX`, `video`)
+
+	var db *sql.DB
+	if config.Config.DatabaseDSN != "" {
+		db, err = sql.Open("pgx", config.Config.DatabaseDSN)
+		if err != nil {
+			panic(err)
+		}
+		defer db.Close()
+	}
+
 	logger.Log.Info("Running server", zap.String("address", config.Config.String()))
 	//var store = storage.NewStorage(nil)
 	store, err := storage.NewStorageData(config.Config.FileStoragePath)
 	if err != nil {
 		return err
 	}
-	return http.ListenAndServe(fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port), Router(store))
+	return http.ListenAndServe(fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port), Router(store, db))
 }

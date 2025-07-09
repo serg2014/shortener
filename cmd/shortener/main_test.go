@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -34,7 +35,8 @@ func testRequest(t *testing.T, ts *httptest.Server, req *http.Request) (*http.Re
 
 func TestGetURL(t *testing.T) {
 	store := storage.NewStorage(nil)
-	ts := httptest.NewServer(Router(store))
+	var db *sql.DB
+	ts := httptest.NewServer(Router(store, db))
 	defer ts.Close()
 
 	type want struct {
@@ -126,7 +128,8 @@ func TestGetURL(t *testing.T) {
 
 func TestCreateURL(t *testing.T) {
 	store := storage.NewStorage(nil)
-	ts := httptest.NewServer(Router(store))
+	var db *sql.DB
+	ts := httptest.NewServer(Router(store, db))
 	defer ts.Close()
 
 	type want struct {

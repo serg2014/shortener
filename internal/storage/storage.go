@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"sync"
 )
 
@@ -45,8 +46,13 @@ func (s *storage) Close() error {
 	return nil
 }
 
+func (s *storage) Ping(ctx context.Context) error {
+	return nil
+}
+
 type Storager interface {
 	Get(key string) (string, bool, error)
 	Set(key string, value string) error
 	Close() error
+	Ping(ctx context.Context) error
 }

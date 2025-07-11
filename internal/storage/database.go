@@ -17,6 +17,8 @@ type storageDB struct {
 }
 
 func NewStorageDB(dsn string) (Storager, error) {
+	// dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
+	//  `localhost`, `video`, `XXXXXXXX`, `video`)
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
@@ -33,7 +35,6 @@ func NewStorageDB(dsn string) (Storager, error) {
 	return &storageDB{db: db}, nil
 }
 
-// TODO return error
 func (storage *storageDB) Get(key string) (string, bool, error) {
 	query := "SELECT orig_url FROM short2orig WHERE short_url = $1"
 	row := storage.db.QueryRowContext(context.Background(), query, key)
@@ -64,4 +65,8 @@ func (storage *storageDB) Set(key string, value string) error {
 
 func (storage *storageDB) Close() error {
 	return storage.db.Close()
+}
+
+func (storage *storageDB) Ping(ctx context.Context) error {
+	return storage.db.PingContext(ctx)
 }

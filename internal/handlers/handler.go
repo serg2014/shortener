@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -116,16 +115,13 @@ func getOrigURL(store storage.Storager, id string) (string, error) {
 	return "", errors.New("bad id")
 }
 
-func Ping(db *sql.DB) http.HandlerFunc {
+func Ping(store storage.Storager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if db == nil {
-			http.Error(w, "do not use db", http.StatusInternalServerError)
-		} else {
-			ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
-			defer cancel()
-			if err := db.PingContext(ctx); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
+		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+		defer cancel()
+		if err := store.Ping(ctx); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
+
 	}
 }

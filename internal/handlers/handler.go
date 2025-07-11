@@ -29,7 +29,13 @@ func CreateURL(store storage.Storager) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		shortID := app.GenerateShortKey(store, string(origURL))
+		shortID, err := app.GenerateShortKey(store, string(origURL))
+		if err != nil {
+			logger.Log.Error("can not generate short", zap.String("error", err.Error()))
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+
 		body := URLTemplate(shortID)
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(body))
@@ -53,7 +59,13 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 			return
 		}
 
-		shortID := app.GenerateShortKey(store, req.URL)
+		shortID, err := app.GenerateShortKey(store, req.URL)
+		if err != nil {
+			logger.Log.Error("can not generate short", zap.String("error", err.Error()))
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+
 		resp := models.Response{
 			Result: URLTemplate(shortID),
 		}
@@ -77,7 +89,12 @@ func URLTemplate(id string) string {
 func GetURL(store storage.Storager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "key")
-		origURL, ok := store.Get(id)
+		origURL, ok, err := store.Get(id)
+		if err != nil {
+			logger.Log.Error("error in Get", zap.String("error", err.Error()))
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
 		if !ok {
 			http.Error(w, "bad id", http.StatusBadRequest)
 			return
@@ -88,9 +105,14 @@ func GetURL(store storage.Storager) http.HandlerFunc {
 }
 
 func getOrigURL(store storage.Storager, id string) (string, error) {
-	if origURL, ok := store.Get(id); ok {
+	origURL, ok, err := store.Get(id)
+	if err != nil {
+		return "", err
+	}
+	if ok {
 		return origURL, nil
 	}
+
 	return "", errors.New("bad id")
 }
 
@@ -99,7 +121,7 @@ func Ping(db *sql.DB) http.HandlerFunc {
 		if db == nil {
 			http.Error(w, "do not use db", http.StatusInternalServerError)
 		} else {
-			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+			ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 			defer cancel()
 			if err := db.PingContext(ctx); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)

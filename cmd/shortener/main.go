@@ -100,11 +100,12 @@ func run() error {
 		defer db.Close()
 	}
 
-	logger.Log.Info("Running server", zap.String("address", config.Config.String()))
-	//var store = storage.NewStorage(nil)
-	store, err := storage.NewStorageData(config.Config.FileStoragePath)
+	store, err := storage.NewStorage(config.Config.FileStoragePath, config.Config.DatabaseDSN)
 	if err != nil {
 		return err
 	}
+	defer store.Close()
+
+	logger.Log.Info("Running server", zap.String("address", config.Config.String()))
 	return http.ListenAndServe(fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port), Router(store, db))
 }

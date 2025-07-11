@@ -80,7 +80,7 @@ func (s *storageFile) saveRow(shortURL, originalURL string) error {
 	return nil
 }
 
-func (storage *storageFile) Close() error {
+func (s *storageFile) Close() error {
 	// TODO flush
 	return nil
 }

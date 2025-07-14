@@ -1,8 +1,10 @@
 package app
 
 import (
+	"context"
 	"math/rand"
 
+	"github.com/serg2014/shortener/internal/models"
 	"github.com/serg2014/shortener/internal/storage"
 )
 
@@ -20,4 +22,17 @@ func GenerateShortKey(store storage.Storager, origURL string) (string, error) {
 	shortURL := generateShortKey()
 	err := store.Set(shortURL, string(origURL))
 	return shortURL, err
+}
+
+func GenerateShortKeyBatch(ctx context.Context, store storage.Storager, req models.RequestBatch) (models.ResponseBatch, error) {
+	resp := make(models.ResponseBatch, len(req))
+	short2orig := make(map[string]string, len(req))
+	for i := range req {
+		resp[i].CorrelationId = req[i].CorrelationId
+		resp[i].ShortUrl = generateShortKey()
+		short2orig[resp[i].ShortUrl] = req[i].OriginalURL
+	}
+
+	err := store.SetBatch(ctx, short2orig)
+	return resp, err
 }

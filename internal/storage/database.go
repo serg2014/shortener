@@ -63,6 +63,34 @@ func (storage *storageDB) Set(key string, value string) error {
 	return err
 }
 
+func (storage *storageDB) SetBatch(ctx context.Context, data short2orig) error {
+	// начать транзакцию
+	tx, err := storage.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	query := `INSERT INTO short2orig (short_url, orig_url)
+		VALUES ($1, $2)
+		ON CONFLICT (short_url) DO NOTHING
+	`
+	stmt, err := tx.PrepareContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for key, value := range data {
+		_, err := stmt.ExecContext(ctx, key, value)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
 func (storage *storageDB) Close() error {
 	return storage.db.Close()
 }

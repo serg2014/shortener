@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"maps"
 	"sync"
 )
 
@@ -42,6 +43,14 @@ func (s *storage) Set(key string, value string) error {
 	return nil
 }
 
+func (s *storage) SetBatch(ctx context.Context, data short2orig) error {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	maps.Copy(s.short2orig, data)
+	return nil
+}
+
 func (s *storage) Close() error {
 	return nil
 }
@@ -53,6 +62,7 @@ func (s *storage) Ping(ctx context.Context) error {
 type Storager interface {
 	Get(key string) (string, bool, error)
 	Set(key string, value string) error
+	SetBatch(ctx context.Context, data short2orig) error
 	Close() error
 	Ping(ctx context.Context) error
 }

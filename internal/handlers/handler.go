@@ -125,3 +125,37 @@ func Ping(store storage.Storager) http.HandlerFunc {
 
 	}
 }
+
+// TODO copy paste func CreateURL2
+func CreateURLBatch(store storage.Storager) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		var req models.RequestBatch
+		dec := json.NewDecoder(r.Body)
+		if err := dec.Decode(&req); err != nil {
+			logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		// TODO проверить что прислали урл. correlation_id должен быть уникальным
+		resp, err := app.GenerateShortKeyBatch(r.Context(), store, req)
+		if err != nil {
+			logger.Log.Error(
+				"can not generate short",
+				zap.String("error", err.Error()),
+			)
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+
+		// порядок важен
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		// сериализуем ответ сервера
+		enc := json.NewEncoder(w)
+		if err := enc.Encode(resp); err != nil {
+			logger.Log.Error("error encoding response", zap.Error(err))
+			return
+		}
+	}
+}

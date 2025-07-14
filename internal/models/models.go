@@ -8,4 +8,16 @@ type Response struct {
 	Result string `json:"result"`
 }
 
+type RequestBatchItem struct {
+	CorrelationId string `json:"correlation_id"`
+	OriginalURL   string `json:"original_url"`
+}
+type RequestBatch []RequestBatchItem
+
+type ResponseBatchItem struct {
+	CorrelationId string `json:"correlation_id"`
+	ShortUrl      string `json:"short_url"`
+}
+type ResponseBatch []ResponseBatchItem
+
 // TODO добавить тесты

@@ -73,6 +73,7 @@ func Router(store storage.Storager) chi.Router {
 	//r.Post("/", logger.RequestLogger(CreateURL(store)))  // POST /
 	//r.Get("/{key}", logger.RequestLogger(GetURL(store))) // GET /Fvdvgfgf
 	r.Get("/ping", handlers.Ping(store))
+	r.Post("/api/shorten/batch", handlers.CreateURLBatch(store))
 	return r
 }
 

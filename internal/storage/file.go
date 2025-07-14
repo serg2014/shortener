@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"os"
 
@@ -60,6 +61,22 @@ func (s *storageFile) Set(key string, value string) error {
 		logger.Log.Error("while save row in file", zap.Error(err))
 	}
 	return err
+}
+
+func (s *storageFile) SetBatch(ctx context.Context, data short2orig) error {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	for key, value := range data {
+		s.short2orig[key] = value
+		err := s.saveRow(key, value)
+		if err != nil {
+			logger.Log.Error("while save row in file", zap.Error(err))
+			return err
+		}
+
+	}
+	return nil
 }
 
 // TODO flush

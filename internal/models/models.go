@@ -9,14 +9,14 @@ type Response struct {
 }
 
 type RequestBatchItem struct {
-	CorrelationId string `json:"correlation_id"`
+	CorrelationID string `json:"correlation_id"`
 	OriginalURL   string `json:"original_url"`
 }
 type RequestBatch []RequestBatchItem
 
 type ResponseBatchItem struct {
-	CorrelationId string `json:"correlation_id"`
-	ShortUrl      string `json:"short_url"`
+	CorrelationID string `json:"correlation_id"`
+	ShortURL      string `json:"short_url"`
 }
 type ResponseBatch []ResponseBatchItem
 

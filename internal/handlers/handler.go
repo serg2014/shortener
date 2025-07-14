@@ -4,14 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/serg2014/shortener/internal/app"
-	"github.com/serg2014/shortener/internal/config"
 	"github.com/serg2014/shortener/internal/logger"
 	"github.com/serg2014/shortener/internal/models"
 	"github.com/serg2014/shortener/internal/storage"
@@ -28,16 +26,15 @@ func CreateURL(store storage.Storager) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		shortID, err := app.GenerateShortKey(store, string(origURL))
+		shortURL, err := app.GenerateShortURL(store, string(origURL))
 		if err != nil {
 			logger.Log.Error("can not generate short", zap.String("error", err.Error()))
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
 
-		body := URLTemplate(shortID)
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(body))
+		w.Write([]byte(shortURL))
 	}
 }
 
@@ -58,7 +55,7 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 			return
 		}
 
-		shortID, err := app.GenerateShortKey(store, req.URL)
+		shortURL, err := app.GenerateShortURL(store, req.URL)
 		if err != nil {
 			logger.Log.Error("can not generate short", zap.String("error", err.Error()))
 			http.Error(w, "", http.StatusInternalServerError)
@@ -66,7 +63,7 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 		}
 
 		resp := models.Response{
-			Result: URLTemplate(shortID),
+			Result: shortURL,
 		}
 
 		// порядок важен
@@ -79,10 +76,6 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 			return
 		}
 	}
-}
-
-func URLTemplate(id string) string {
-	return fmt.Sprintf("%s%s", config.Config.URL(), id)
 }
 
 func GetURL(store storage.Storager) http.HandlerFunc {
@@ -138,7 +131,7 @@ func CreateURLBatch(store storage.Storager) http.HandlerFunc {
 			return
 		}
 		// TODO проверить что прислали урл. correlation_id должен быть уникальным
-		resp, err := app.GenerateShortKeyBatch(r.Context(), store, req)
+		resp, err := app.GenerateShortURLBatch(r.Context(), store, req)
 		if err != nil {
 			logger.Log.Error(
 				"can not generate short",

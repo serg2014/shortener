@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/serg2014/shortener/internal/handlers"
+	"github.com/serg2014/shortener/internal/app"
 	"github.com/serg2014/shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -154,7 +154,7 @@ func TestCreateURL(t *testing.T) {
 			name: "test #1",
 			want: want{
 				statusCode:  http.StatusCreated,
-				response:    handlers.URLTemplate(""),
+				response:    app.URLTemplate(""),
 				contentType: "text/plain",
 			},
 			reqParam: reqParam{http.MethodPost, "/", strings.NewReader("http://some.ru/123")},

@@ -35,8 +35,9 @@ func GenerateShortURLBatch(ctx context.Context, store storage.Storager, req mode
 	short2orig := make(map[string]string, len(req))
 	for i := range req {
 		resp[i].CorrelationID = req[i].CorrelationID
-		resp[i].ShortURL = URLTemplate(generateShortKey())
-		short2orig[resp[i].ShortURL] = req[i].OriginalURL
+		id := generateShortKey()
+		resp[i].ShortURL = URLTemplate(id)
+		short2orig[id] = req[i].OriginalURL
 	}
 
 	err := store.SetBatch(ctx, short2orig)

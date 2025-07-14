@@ -134,7 +134,7 @@ func CreateURLBatch(store storage.Storager) http.HandlerFunc {
 		resp, err := app.GenerateShortURLBatch(r.Context(), store, req)
 		if err != nil {
 			logger.Log.Error(
-				"can not generate short",
+				"can not generate short batch",
 				zap.String("error", err.Error()),
 			)
 			http.Error(w, "", http.StatusInternalServerError)

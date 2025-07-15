@@ -29,7 +29,7 @@ func NewStorageFile(filePath string) (Storager, error) {
 
 	scanner := bufio.NewScanner(file)
 	var item item
-	data := make(short2orig)
+	s := storageFile{file: file, storage: storage{short2orig: make(short2orig), orig2short: make(orig2short)}}
 	// TODO если строка будет длинной получим ошибку
 	for scanner.Scan() {
 		line := scanner.Bytes()
@@ -37,25 +37,40 @@ func NewStorageFile(filePath string) (Storager, error) {
 		if err != nil {
 			return nil, err
 		}
-		if _, ok := data[item.ShortURL]; ok {
+		if _, ok := s.short2orig[item.ShortURL]; ok {
 			logger.Log.Error(
 				"Duplicate key ShortURL",
 				zap.String("ShortURL", item.ShortURL),
 				zap.String("OriginalURL", item.OriginalURL),
 			)
+			continue
 		}
-		data[item.ShortURL] = item.OriginalURL
+		if _, ok := s.orig2short[item.OriginalURL]; ok {
+			logger.Log.Error(
+				"Duplicate key OriginalURL",
+				zap.String("ShortURL", item.ShortURL),
+				zap.String("OriginalURL", item.OriginalURL),
+			)
+			continue
+		}
+		s.short2orig[item.ShortURL] = item.OriginalURL
+		s.orig2short[item.OriginalURL] = item.ShortURL
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
-	return &storageFile{file: file, storage: storage{short2orig: data}}, nil
+	return &s, nil
 }
 
 func (s *storageFile) Set(key string, value string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
+	if _, ok := s.orig2short[value]; ok {
+		return ErrConflict
+	}
+
 	s.short2orig[key] = value
+	s.orig2short[value] = key
 	err := s.saveRow(key, value)
 	if err != nil {
 		logger.Log.Error("while save row in file", zap.Error(err))
@@ -69,6 +84,8 @@ func (s *storageFile) SetBatch(ctx context.Context, data short2orig) error {
 
 	for key, value := range data {
 		s.short2orig[key] = value
+		// TODO проблема если в data несколько одинаковых значений
+		s.orig2short[value] = key
 		err := s.saveRow(key, value)
 		if err != nil {
 			logger.Log.Error("while save row in file", zap.Error(err))

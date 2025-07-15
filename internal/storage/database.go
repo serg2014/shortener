@@ -3,14 +3,15 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"strconv"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/serg2014/shortener/internal/logger"
-	"go.uber.org/zap"
 )
 
 const KeyLength = 8
+
+var ErrConflict = errors.New("data conflict")
 
 type storageDB struct {
 	db *sql.DB
@@ -26,7 +27,7 @@ func NewStorageDB(dsn string) (Storager, error) {
 
 	query := `CREATE TABLE IF NOT EXISTS short2orig (
 		short_url varchar(` + strconv.Itoa(KeyLength) + `) PRIMARY KEY,
-		orig_url text
+		orig_url text UNIQUE
 	)`
 	_, err = db.ExecContext(context.Background(), query)
 	if err != nil {
@@ -50,16 +51,35 @@ func (storage *storageDB) Get(key string) (string, bool, error) {
 	return "", false, err
 }
 
+func (storage *storageDB) GetShort(url string) (string, bool, error) {
+	query := "SELECT short_url FROM short2orig WHERE orig_url = $1"
+	row := storage.db.QueryRowContext(context.Background(), query, url)
+	var value string
+	err := row.Scan(&value)
+	if err == nil {
+		return value, true, nil
+	}
+
+	if err == sql.ErrNoRows {
+		return "", false, nil
+	}
+	return "", false, err
+}
+
 func (storage *storageDB) Set(key string, value string) error {
 	query := `INSERT INTO short2orig (short_url, orig_url)
 	 	VALUES ($1, $2)
-		ON CONFLICT (short_url) DO NOTHING
+		ON CONFLICT (orig_url) DO NOTHING
 	`
-	_, err := storage.db.ExecContext(context.Background(), query, key, value)
+	result, err := storage.db.ExecContext(context.Background(), query, key, value)
 	if err != nil {
-		// TODO может залогировать там где вызов
-		logger.Log.Error("can not insert", zap.String("short_url", key), zap.String("orig_url", value))
+		return err
 	}
+	ra, _ := result.RowsAffected()
+	if ra == 0 {
+		return ErrConflict
+	}
+
 	return err
 }
 
@@ -73,7 +93,7 @@ func (storage *storageDB) SetBatch(ctx context.Context, data short2orig) error {
 
 	query := `INSERT INTO short2orig (short_url, orig_url)
 		VALUES ($1, $2)
-		ON CONFLICT (short_url) DO NOTHING
+		ON CONFLICT (orig_url) DO NOTHING
 	`
 	stmt, err := tx.PrepareContext(ctx, query)
 	if err != nil {

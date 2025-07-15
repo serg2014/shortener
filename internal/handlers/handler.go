@@ -26,14 +26,18 @@ func CreateURL(store storage.Storager) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		status := http.StatusCreated
 		shortURL, err := app.GenerateShortURL(store, string(origURL))
 		if err != nil {
-			logger.Log.Error("can not generate short", zap.String("error", err.Error()))
-			http.Error(w, "", http.StatusInternalServerError)
-			return
+			if !errors.Is(err, storage.ErrConflict) {
+				logger.Log.Error("can not generate short", zap.String("error", err.Error()))
+				http.Error(w, "", http.StatusInternalServerError)
+				return
+			}
+			status = http.StatusConflict
 		}
 
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(status)
 		w.Write([]byte(shortURL))
 	}
 }
@@ -55,11 +59,15 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 			return
 		}
 
+		status := http.StatusCreated
 		shortURL, err := app.GenerateShortURL(store, req.URL)
 		if err != nil {
-			logger.Log.Error("can not generate short", zap.String("error", err.Error()))
-			http.Error(w, "", http.StatusInternalServerError)
-			return
+			if !errors.Is(err, storage.ErrConflict) {
+				logger.Log.Error("can not generate short", zap.Error(err))
+				http.Error(w, "", http.StatusInternalServerError)
+				return
+			}
+			status = http.StatusConflict
 		}
 
 		resp := models.Response{
@@ -68,7 +76,7 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 
 		// порядок важен
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(status)
 		// сериализуем ответ сервера
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(resp); err != nil {

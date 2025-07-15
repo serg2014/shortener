@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 
@@ -22,8 +23,22 @@ func generateShortKey() string {
 
 func GenerateShortURL(store storage.Storager, origURL string) (string, error) {
 	shortURL := generateShortKey()
-	err := store.Set(shortURL, string(origURL))
-	return URLTemplate(shortURL), err
+	err := store.Set(shortURL, origURL)
+	if err != nil {
+		if !errors.Is(err, storage.ErrConflict) {
+			return "", err
+		}
+		shortURL, ok, err := store.GetShort(origURL)
+		if err != nil {
+			return "", err
+		}
+		if !ok {
+			return "", fmt.Errorf("can not find origurl %s", origURL)
+		}
+		return URLTemplate(shortURL), storage.ErrConflict
+	}
+
+	return URLTemplate(shortURL), nil
 }
 
 func URLTemplate(id string) string {

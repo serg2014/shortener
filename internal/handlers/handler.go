@@ -27,7 +27,7 @@ func CreateURL(store storage.Storager) http.HandlerFunc {
 			return
 		}
 		status := http.StatusCreated
-		shortURL, err := app.GenerateShortURL(store, string(origURL))
+		shortURL, err := app.GenerateShortURL(r.Context(), store, string(origURL))
 		if err != nil {
 			if !errors.Is(err, storage.ErrConflict) {
 				logger.Log.Error("can not generate short", zap.String("error", err.Error()))
@@ -60,7 +60,7 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 		}
 
 		status := http.StatusCreated
-		shortURL, err := app.GenerateShortURL(store, req.URL)
+		shortURL, err := app.GenerateShortURL(r.Context(), store, req.URL)
 		if err != nil {
 			if !errors.Is(err, storage.ErrConflict) {
 				logger.Log.Error("can not generate short", zap.Error(err))
@@ -89,7 +89,7 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 func GetURL(store storage.Storager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "key")
-		origURL, ok, err := store.Get(id)
+		origURL, ok, err := store.Get(r.Context(), id)
 		if err != nil {
 			logger.Log.Error("error in Get", zap.String("error", err.Error()))
 			http.Error(w, "", http.StatusInternalServerError)
@@ -102,18 +102,6 @@ func GetURL(store storage.Storager) http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/plain")
 		http.Redirect(w, r, origURL, http.StatusTemporaryRedirect)
 	}
-}
-
-func getOrigURL(store storage.Storager, id string) (string, error) {
-	origURL, ok, err := store.Get(id)
-	if err != nil {
-		return "", err
-	}
-	if ok {
-		return origURL, nil
-	}
-
-	return "", errors.New("bad id")
 }
 
 func Ping(store storage.Storager) http.HandlerFunc {

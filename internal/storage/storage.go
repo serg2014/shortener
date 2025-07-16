@@ -14,9 +14,9 @@ type storage struct {
 	m          sync.RWMutex
 }
 
-func NewStorage(filePath string, dsn string) (Storager, error) {
+func NewStorage(ctx context.Context, filePath string, dsn string) (Storager, error) {
 	if dsn != "" {
-		return NewStorageDB(dsn)
+		return NewStorageDB(ctx, dsn)
 	}
 	if filePath != "" {
 		return NewStorageFile(filePath)
@@ -35,21 +35,21 @@ func NewStorageMemory(data map[string]string) (Storager, error) {
 	return &storage{short2orig: data, orig2short: orig2short}, nil
 }
 
-func (s *storage) Get(key string) (string, bool, error) {
+func (s *storage) Get(ctx context.Context, key string) (string, bool, error) {
 	s.m.RLock()
 	defer s.m.RUnlock()
 	v, ok := s.short2orig[key]
 	return v, ok, nil
 }
 
-func (s *storage) GetShort(origURL string) (string, bool, error) {
+func (s *storage) GetShort(ctx context.Context, origURL string) (string, bool, error) {
 	s.m.RLock()
 	defer s.m.RUnlock()
 	v, ok := s.orig2short[origURL]
 	return v, ok, nil
 }
 
-func (s *storage) Set(key string, value string) error {
+func (s *storage) Set(ctx context.Context, key string, value string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 	if _, ok := s.orig2short[value]; ok {
@@ -82,9 +82,9 @@ func (s *storage) Ping(ctx context.Context) error {
 }
 
 type Storager interface {
-	Get(key string) (string, bool, error)
-	GetShort(origURL string) (string, bool, error)
-	Set(key string, value string) error
+	Get(ctx context.Context, key string) (string, bool, error)
+	GetShort(ctx context.Context, origURL string) (string, bool, error)
+	Set(ctx context.Context, key string, value string) error
 	SetBatch(ctx context.Context, data short2orig) error
 	Close() error
 	Ping(ctx context.Context) error

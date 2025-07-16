@@ -17,7 +17,7 @@ type storageDB struct {
 	db *sql.DB
 }
 
-func NewStorageDB(dsn string) (Storager, error) {
+func NewStorageDB(ctx context.Context, dsn string) (Storager, error) {
 	// dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
 	//  `localhost`, `video`, `XXXXXXXX`, `video`)
 	db, err := sql.Open("pgx", dsn)
@@ -29,16 +29,16 @@ func NewStorageDB(dsn string) (Storager, error) {
 		short_url varchar(` + strconv.Itoa(KeyLength) + `) PRIMARY KEY,
 		orig_url text UNIQUE
 	)`
-	_, err = db.ExecContext(context.Background(), query)
+	_, err = db.ExecContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 	return &storageDB{db: db}, nil
 }
 
-func (storage *storageDB) Get(key string) (string, bool, error) {
+func (storage *storageDB) Get(ctx context.Context, key string) (string, bool, error) {
 	query := "SELECT orig_url FROM short2orig WHERE short_url = $1"
-	row := storage.db.QueryRowContext(context.Background(), query, key)
+	row := storage.db.QueryRowContext(ctx, query, key)
 	var value string
 	err := row.Scan(&value)
 	if err == nil {
@@ -51,9 +51,9 @@ func (storage *storageDB) Get(key string) (string, bool, error) {
 	return "", false, err
 }
 
-func (storage *storageDB) GetShort(url string) (string, bool, error) {
+func (storage *storageDB) GetShort(ctx context.Context, url string) (string, bool, error) {
 	query := "SELECT short_url FROM short2orig WHERE orig_url = $1"
-	row := storage.db.QueryRowContext(context.Background(), query, url)
+	row := storage.db.QueryRowContext(ctx, query, url)
 	var value string
 	err := row.Scan(&value)
 	if err == nil {
@@ -66,12 +66,12 @@ func (storage *storageDB) GetShort(url string) (string, bool, error) {
 	return "", false, err
 }
 
-func (storage *storageDB) Set(key string, value string) error {
+func (storage *storageDB) Set(ctx context.Context, key string, value string) error {
 	query := `INSERT INTO short2orig (short_url, orig_url)
 	 	VALUES ($1, $2)
 		ON CONFLICT (orig_url) DO NOTHING
 	`
-	result, err := storage.db.ExecContext(context.Background(), query, key, value)
+	result, err := storage.db.ExecContext(ctx, query, key, value)
 	if err != nil {
 		return err
 	}

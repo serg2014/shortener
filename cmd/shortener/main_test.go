@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -85,7 +86,7 @@ func TestGetURL(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.store.key != "" {
-				store.Set(test.store.key, test.store.value)
+				store.Set(context.Background(), test.store.key, test.store.value)
 			}
 			req, err := http.NewRequest(test.reqParam.method, ts.URL+test.reqParam.url, test.reqParam.body)
 			require.NoError(t, err)
@@ -184,7 +185,7 @@ func TestCreateURL(t *testing.T) {
 
 			id, ok := strings.CutPrefix(string(respBody), test.want.response)
 			if assert.True(t, ok) {
-				val, ok, err := store.Get(id)
+				val, ok, err := store.Get(context.Background(), id)
 				assert.NoError(t, err)
 				assert.True(t, ok)
 				assert.Equal(t, test.store.value, val)

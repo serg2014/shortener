@@ -62,7 +62,7 @@ func NewStorageFile(filePath string) (Storager, error) {
 	return &s, nil
 }
 
-func (s *storageFile) Set(key string, value string) error {
+func (s *storageFile) Set(ctx context.Context, key string, value string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 	if _, ok := s.orig2short[value]; ok {

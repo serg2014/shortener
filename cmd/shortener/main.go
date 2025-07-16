@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -87,7 +88,8 @@ func run() error {
 		return err
 	}
 
-	store, err := storage.NewStorage(config.Config.FileStoragePath, config.Config.DatabaseDSN)
+	ctx := context.Background()
+	store, err := storage.NewStorage(ctx, config.Config.FileStoragePath, config.Config.DatabaseDSN)
 	if err != nil {
 		return err
 	}

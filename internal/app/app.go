@@ -21,14 +21,14 @@ func generateShortKey() string {
 	return string(shortKey)
 }
 
-func GenerateShortURL(store storage.Storager, origURL string) (string, error) {
+func GenerateShortURL(ctx context.Context, store storage.Storager, origURL string) (string, error) {
 	shortURL := generateShortKey()
-	err := store.Set(shortURL, origURL)
+	err := store.Set(ctx, shortURL, origURL)
 	if err != nil {
 		if !errors.Is(err, storage.ErrConflict) {
 			return "", err
 		}
-		shortURL, ok, err := store.GetShort(origURL)
+		shortURL, ok, err := store.GetShort(ctx, origURL)
 		if err != nil {
 			return "", err
 		}

@@ -1,13 +1,14 @@
 package main
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/serg2014/shortener/internal/handlers"
+	"github.com/serg2014/shortener/internal/app"
 	"github.com/serg2014/shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,7 +34,7 @@ func testRequest(t *testing.T, ts *httptest.Server, req *http.Request) (*http.Re
 }
 
 func TestGetURL(t *testing.T) {
-	store := storage.NewStorage(nil)
+	store, _ := storage.NewStorageMemory(nil)
 	ts := httptest.NewServer(Router(store))
 	defer ts.Close()
 
@@ -85,7 +86,7 @@ func TestGetURL(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.store.key != "" {
-				store.Set(test.store.key, test.store.value)
+				store.Set(context.Background(), test.store.key, test.store.value)
 			}
 			req, err := http.NewRequest(test.reqParam.method, ts.URL+test.reqParam.url, test.reqParam.body)
 			require.NoError(t, err)
@@ -125,7 +126,7 @@ func TestGetURL(t *testing.T) {
 }
 
 func TestCreateURL(t *testing.T) {
-	store := storage.NewStorage(nil)
+	store, _ := storage.NewStorageMemory(nil)
 	ts := httptest.NewServer(Router(store))
 	defer ts.Close()
 
@@ -154,7 +155,7 @@ func TestCreateURL(t *testing.T) {
 			name: "test #1",
 			want: want{
 				statusCode:  http.StatusCreated,
-				response:    handlers.URLTemplate(""),
+				response:    app.URLTemplate(""),
 				contentType: "text/plain",
 			},
 			reqParam: reqParam{http.MethodPost, "/", strings.NewReader("http://some.ru/123")},
@@ -184,7 +185,8 @@ func TestCreateURL(t *testing.T) {
 
 			id, ok := strings.CutPrefix(string(respBody), test.want.response)
 			if assert.True(t, ok) {
-				val, ok := store.Get(id)
+				val, ok, err := store.Get(context.Background(), id)
+				assert.NoError(t, err)
 				assert.True(t, ok)
 				assert.Equal(t, test.store.value, val)
 			}

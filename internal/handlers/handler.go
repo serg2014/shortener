@@ -1,15 +1,15 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/serg2014/shortener/internal/app"
-	"github.com/serg2014/shortener/internal/config"
 	"github.com/serg2014/shortener/internal/logger"
 	"github.com/serg2014/shortener/internal/models"
 	"github.com/serg2014/shortener/internal/storage"
@@ -26,10 +26,19 @@ func CreateURL(store storage.Storager) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		shortID := app.GenerateShortKey(store, string(origURL))
-		body := URLTemplate(shortID)
-		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(body))
+		status := http.StatusCreated
+		shortURL, err := app.GenerateShortURL(r.Context(), store, string(origURL))
+		if err != nil {
+			if !errors.Is(err, storage.ErrConflict) {
+				logger.Log.Error("can not generate short", zap.String("error", err.Error()))
+				http.Error(w, "", http.StatusInternalServerError)
+				return
+			}
+			status = http.StatusConflict
+		}
+
+		w.WriteHeader(status)
+		w.Write([]byte(shortURL))
 	}
 }
 
@@ -50,31 +59,42 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 			return
 		}
 
-		shortID := app.GenerateShortKey(store, req.URL)
+		status := http.StatusCreated
+		shortURL, err := app.GenerateShortURL(r.Context(), store, req.URL)
+		if err != nil {
+			if !errors.Is(err, storage.ErrConflict) {
+				logger.Log.Error("can not generate short", zap.Error(err))
+				http.Error(w, "", http.StatusInternalServerError)
+				return
+			}
+			status = http.StatusConflict
+		}
+
 		resp := models.Response{
-			Result: URLTemplate(shortID),
+			Result: shortURL,
 		}
 
 		// порядок важен
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(status)
 		// сериализуем ответ сервера
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(resp); err != nil {
-			logger.Log.Debug("error encoding response", zap.Error(err))
+			logger.Log.Error("error encoding response", zap.Error(err))
 			return
 		}
 	}
 }
 
-func URLTemplate(id string) string {
-	return fmt.Sprintf("%s%s", config.Config.URL(), id)
-}
-
 func GetURL(store storage.Storager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "key")
-		origURL, ok := store.Get(id)
+		origURL, ok, err := store.Get(r.Context(), id)
+		if err != nil {
+			logger.Log.Error("error in Get", zap.String("error", err.Error()))
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
 		if !ok {
 			http.Error(w, "bad id", http.StatusBadRequest)
 			return
@@ -84,9 +104,47 @@ func GetURL(store storage.Storager) http.HandlerFunc {
 	}
 }
 
-func getOrigURL(store storage.Storager, id string) (string, error) {
-	if origURL, ok := store.Get(id); ok {
-		return origURL, nil
+func Ping(store storage.Storager) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+		defer cancel()
+		if err := store.Ping(ctx); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+
 	}
-	return "", errors.New("bad id")
+}
+
+// TODO copy paste func CreateURL2
+func CreateURLBatch(store storage.Storager) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		var req models.RequestBatch
+		dec := json.NewDecoder(r.Body)
+		if err := dec.Decode(&req); err != nil {
+			logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		// TODO проверить что прислали урл. correlation_id должен быть уникальным
+		resp, err := app.GenerateShortURLBatch(r.Context(), store, req)
+		if err != nil {
+			logger.Log.Error(
+				"can not generate short batch",
+				zap.String("error", err.Error()),
+			)
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+
+		// порядок важен
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		// сериализуем ответ сервера
+		enc := json.NewEncoder(w)
+		if err := enc.Encode(resp); err != nil {
+			logger.Log.Error("error encoding response", zap.Error(err))
+			return
+		}
+	}
 }

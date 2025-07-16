@@ -16,6 +16,7 @@ type config struct {
 	BaseURL         string `env:"BASE_URL"`
 	LogLevel        string `env:"LOG_LEVEL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	DatabaseDSN     string `env:"DATABASE_DSN"`
 }
 
 var Config = &config{
@@ -59,6 +60,7 @@ func (c *config) InitConfig() error {
 	flag.StringVar(&c.BaseURL, "b", "", "Like http://ya.ru")
 	flag.StringVar(&c.LogLevel, "l", "info", "log level")
 	flag.StringVar(&c.FileStoragePath, "f", "/tmp/shorten_storage", "path to storage file")
+	flag.StringVar(&c.DatabaseDSN, "d", "", "database dsn")
 	flag.Parse()
 
 	var envConfig config
@@ -89,6 +91,10 @@ func (c *config) InitConfig() error {
 
 	if envConfig.FileStoragePath != "" {
 		c.FileStoragePath = envConfig.FileStoragePath
+	}
+
+	if envConfig.DatabaseDSN != "" {
+		c.DatabaseDSN = envConfig.DatabaseDSN
 	}
 
 	return nil

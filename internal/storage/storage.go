@@ -1,116 +1,91 @@
 package storage
 
 import (
-	"bufio"
-	"encoding/json"
-	"io"
-	"os"
+	"context"
+	"maps"
 	"sync"
-
-	"github.com/serg2014/shortener/internal/logger"
-	"go.uber.org/zap"
 )
 
-type item struct {
-	ShortURL    string `json:"short_url"`
-	OriginalURL string `json:"original_url"`
-}
-
 type short2orig map[string]string
+type orig2short map[string]string
 type storage struct {
 	short2orig short2orig
+	orig2short orig2short
 	m          sync.RWMutex
-	file       *os.File
 }
 
-func NewStorageData(filePath string) (*storage, error) {
-	// os.O_APPEND os.O_SYNC
-	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		return nil, err
+func NewStorage(ctx context.Context, filePath string, dsn string) (Storager, error) {
+	if dsn != "" {
+		return NewStorageDB(ctx, dsn)
 	}
-	scanner := bufio.NewScanner(file)
-	var item item
-	data := make(short2orig)
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		err := json.Unmarshal(line, &item)
-		if err != nil {
-			return nil, err
-		}
-		if _, ok := data[item.ShortURL]; ok {
-			logger.Log.Error(
-				"Duplicate key ShortURL",
-				zap.String("ShortURL", item.ShortURL),
-				zap.String("OriginalURL", item.OriginalURL),
-			)
-		}
-		data[item.ShortURL] = item.OriginalURL
+	if filePath != "" {
+		return NewStorageFile(filePath)
 	}
-	if err := scanner.Err(); err != nil {
-		//log.Fatal(err)
-		return nil, err
-	}
-	return &storage{file: file, short2orig: data}, nil
+	return NewStorageMemory(nil)
 }
 
-func NewStorage(data map[string]string) *storage {
+func NewStorageMemory(data map[string]string) (Storager, error) {
 	if data == nil {
-		return &storage{short2orig: make(map[string]string)}
+		return &storage{short2orig: make(short2orig), orig2short: make(orig2short)}, nil
 	}
-	return &storage{short2orig: data}
+	orig2short := make(orig2short, len(data))
+	for k := range data {
+		orig2short[data[k]] = k
+	}
+	return &storage{short2orig: data, orig2short: orig2short}, nil
 }
 
-func (s *storage) Get(key string) (string, bool) {
+func (s *storage) Get(ctx context.Context, key string) (string, bool, error) {
 	s.m.RLock()
 	defer s.m.RUnlock()
 	v, ok := s.short2orig[key]
-	return v, ok
+	return v, ok, nil
 }
 
-func (s *storage) Set(key string, value string) {
+func (s *storage) GetShort(ctx context.Context, origURL string) (string, bool, error) {
+	s.m.RLock()
+	defer s.m.RUnlock()
+	v, ok := s.orig2short[origURL]
+	return v, ok, nil
+}
+
+func (s *storage) Set(ctx context.Context, key string, value string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
-	s.short2orig[key] = value
-	err := s.saveRow(key, value)
-	if err != nil {
-		logger.Log.Error("while save row in file", zap.Error(err))
+	if _, ok := s.orig2short[value]; ok {
+		return ErrConflict
 	}
+
+	s.short2orig[key] = value
+	s.orig2short[value] = key
+	return nil
 }
 
-func (s *storage) saveRow(shortURL, originalURL string) error {
-	itemData := item{ShortURL: shortURL, OriginalURL: originalURL}
-	line, err := json.Marshal(itemData)
-	if err != nil {
-		// TODO
-		return err
-	}
-	_, err = s.file.Write(line)
-	if err != nil {
-		return err
-	}
-	_, err = s.file.WriteString("\n")
-	if err != nil {
-		return err
+func (s *storage) SetBatch(ctx context.Context, data short2orig) error {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	maps.Copy(s.short2orig, data)
+	for k := range data {
+		// TODO проблема если в data несколько одинаковых значений
+		s.orig2short[data[k]] = k
 	}
 	return nil
 }
-func (s *storage) SaveAllData() error {
-	s.m.Lock()
-	defer s.m.Unlock()
-	s.file.Seek(0, io.SeekStart)
 
-	for k := range s.short2orig {
-		// TODO в случае ошибки не запишем хвост
-		err := s.saveRow(k, s.short2orig[k])
-		if err != nil {
-			return err
-		}
-	}
+func (s *storage) Close() error {
+	return nil
+}
+
+func (s *storage) Ping(ctx context.Context) error {
 	return nil
 }
 
 type Storager interface {
-	Get(key string) (string, bool)
-	Set(key string, value string)
+	Get(ctx context.Context, key string) (string, bool, error)
+	GetShort(ctx context.Context, origURL string) (string, bool, error)
+	Set(ctx context.Context, key string, value string) error
+	SetBatch(ctx context.Context, data short2orig) error
+	Close() error
+	Ping(ctx context.Context) error
 }

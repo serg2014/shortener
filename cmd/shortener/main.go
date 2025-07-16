@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/go-chi/chi/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/serg2014/shortener/internal/config"
 	"github.com/serg2014/shortener/internal/handlers"
 	"github.com/serg2014/shortener/internal/logger"
@@ -71,6 +73,8 @@ func Router(store storage.Storager) chi.Router {
 	r.Post("/api/shorten", handlers.CreateURL2(store))
 	//r.Post("/", logger.RequestLogger(CreateURL(store)))  // POST /
 	//r.Get("/{key}", logger.RequestLogger(GetURL(store))) // GET /Fvdvgfgf
+	r.Get("/ping", handlers.Ping(store))
+	r.Post("/api/shorten/batch", handlers.CreateURLBatch(store))
 	return r
 }
 
@@ -83,11 +87,14 @@ func run() error {
 	if err := logger.Initialize(config.Config.LogLevel); err != nil {
 		return err
 	}
-	logger.Log.Info("Running server", zap.String("address", config.Config.String()))
-	//var store = storage.NewStorage(nil)
-	store, err := storage.NewStorageData(config.Config.FileStoragePath)
+
+	ctx := context.Background()
+	store, err := storage.NewStorage(ctx, config.Config.FileStoragePath, config.Config.DatabaseDSN)
 	if err != nil {
 		return err
 	}
+	defer store.Close()
+
+	logger.Log.Info("Running server", zap.String("address", config.Config.String()))
 	return http.ListenAndServe(fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port), Router(store))
 }

@@ -4,8 +4,6 @@ import (
 	"context"
 	"maps"
 	"sync"
-
-	"errors"
 )
 
 type short2orig map[string]string
@@ -51,7 +49,7 @@ func (s *storage) GetUserURLS(ctx context.Context, userID string) ([]item, error
 
 	v, ok := s.users[userID]
 	if !ok {
-		return nil, errors.New("no data for user_id")
+		return make([]item, 0), nil
 	}
 	result := make([]item, 0, len(v))
 	for short, url := range v {

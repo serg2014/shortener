@@ -190,18 +190,19 @@ func CreateURLBatch(store storage.Storager) http.HandlerFunc {
 
 func GetUserURLS(store storage.Storager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID, err := auth.GetUserID(w, r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
 		// TODO странный интерфейс
-		_, err = auth.GetUserIDFromCookie(r)
+		userID, err := auth.GetUserIDFromCookie(r)
 		if err != nil {
 			http.Error(w, "", http.StatusUnauthorized)
 			return
 		}
-
+		/*
+			userID, err := auth.GetUserID(w, r)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		*/
 		data, err := store.GetUserURLS(r.Context(), userID)
 		if err != nil {
 			logger.Log.Error("GetUserURLS", zap.Error(err))

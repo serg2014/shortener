@@ -99,6 +99,6 @@ func run() error {
 	}
 	defer store.Close()
 
-	logger.Log.Info("Running server", zap.String("address", config.Config.String()))
+	logger.Log.Info("Running server", zap.String("address", config.Config.String()), zap.String("storage", fmt.Sprintf("%T", store)))
 	return http.ListenAndServe(fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port), Router(store))
 }

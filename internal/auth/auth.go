@@ -72,7 +72,10 @@ func GetUserIDFromCookie(r *http.Request) (string, error) {
 	if err != nil || !isValidToken(cookie.Value) {
 		return "", ErrCookieUserID
 	}
-	items, _ := parseToken(cookie.Value)
+	items, err := parseToken(cookie.Value)
+	if err != nil {
+		return "", err
+	}
 	return items[0], nil
 }
 
@@ -91,7 +94,11 @@ func GetUserID(w http.ResponseWriter, r *http.Request) (string, error) {
 				continue
 			}
 			if cookie.Name == CookieName {
-				userID = cookie.Value
+				items, err := parseToken(cookie.Value)
+				if err != nil {
+					return "", err
+				}
+				userID = items[0]
 				break
 			}
 		}

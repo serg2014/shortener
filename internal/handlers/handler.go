@@ -205,7 +205,7 @@ func GetUserURLS(store storage.Storager) http.HandlerFunc {
 				return
 			}
 		*/
-		data, err := store.GetUserURLS(r.Context(), userID)
+		data, err := app.GetUserURLS(r.Context(), store, userID)
 		if err != nil {
 			logger.Log.Error("GetUserURLS", zap.Error(err))
 			http.Error(w, "", http.StatusInternalServerError)

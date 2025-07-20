@@ -58,3 +58,16 @@ func GenerateShortURLBatch(ctx context.Context, store storage.Storager, req mode
 	err := store.SetBatch(ctx, short2orig, userID)
 	return resp, err
 }
+
+func GetUserURLS(ctx context.Context, store storage.Storager, userID string) (models.ResponseUser, error) {
+	data, err := store.GetUserURLS(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	resp := make(models.ResponseUser, len(data))
+	for i := range data {
+		resp[i].ShortURL = URLTemplate(data[i].ShortURL)
+		resp[i].OriginalURL = data[i].OriginalURL
+	}
+	return resp, nil
+}

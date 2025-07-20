@@ -6,9 +6,6 @@ import (
 	"sync"
 
 	"errors"
-
-	"github.com/serg2014/shortener/internal/logger"
-	"go.uber.org/zap"
 )
 
 type short2orig map[string]string
@@ -70,9 +67,7 @@ func (s *storage) GetShort(ctx context.Context, origURL string) (string, bool, e
 	return v, ok, nil
 }
 
-func (s *storage) Set(ctx context.Context, key string, value string, userID string) error {
-	s.m.Lock()
-	defer s.m.Unlock()
+func (s *storage) set(ctx context.Context, key string, value string, userID string) error {
 	if _, ok := s.orig2short[value]; ok {
 		return ErrConflict
 	}
@@ -83,16 +78,13 @@ func (s *storage) Set(ctx context.Context, key string, value string, userID stri
 		s.users[userID] = make(short2orig)
 	}
 	s.users[userID][key] = value
-
-	err := s.saveRow(key, value, userID)
-	if err != nil {
-		logger.Log.Error("while save row in file", zap.Error(err))
-	}
-	return err
+	return nil
 }
 
-func (s *storage) saveRow(shortURL, originalURL string, userID string) error {
-	return nil
+func (s *storage) Set(ctx context.Context, key string, value string, userID string) error {
+	s.m.Lock()
+	defer s.m.Unlock()
+	return s.set(ctx, key, value, userID)
 }
 
 func (s *storage) SetBatch(ctx context.Context, data short2orig, userID string) error {

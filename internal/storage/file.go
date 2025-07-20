@@ -76,6 +76,17 @@ func NewStorageFile(filePath string) (Storager, error) {
 	return &s, nil
 }
 
+func (s *storageFile) Set(ctx context.Context, key string, value string, userID string) error {
+	s.m.Lock()
+	defer s.m.Unlock()
+	err := s.set(ctx, key, value, userID)
+	if err != nil {
+		return err
+	}
+
+	return s.saveRow(key, value, userID)
+}
+
 /*
 func (s *storageFile) Set(ctx context.Context, key string, value string, userID string) error {
 	s.m.Lock()

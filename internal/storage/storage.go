@@ -79,6 +79,9 @@ func (s *storage) Set(ctx context.Context, key string, value string, userID stri
 
 	s.short2orig[key] = value
 	s.orig2short[value] = key
+	if _, ok := s.users[userID]; !ok {
+		s.users[userID] = make(short2orig)
+	}
 	s.users[userID][key] = value
 
 	err := s.saveRow(key, value, userID)
@@ -95,6 +98,10 @@ func (s *storage) saveRow(shortURL, originalURL string, userID string) error {
 func (s *storage) SetBatch(ctx context.Context, data short2orig, userID string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
+
+	if _, ok := s.users[userID]; !ok {
+		s.users[userID] = make(short2orig)
+	}
 
 	maps.Copy(s.short2orig, data)
 	for k := range data {

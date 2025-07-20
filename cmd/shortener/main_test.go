@@ -86,7 +86,8 @@ func TestGetURL(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.store.key != "" {
-				store.Set(context.Background(), test.store.key, test.store.value)
+				userID := ""
+				store.Set(context.Background(), test.store.key, test.store.value, userID)
 			}
 			req, err := http.NewRequest(test.reqParam.method, ts.URL+test.reqParam.url, test.reqParam.body)
 			require.NoError(t, err)

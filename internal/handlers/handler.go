@@ -206,9 +206,11 @@ func GetUserURLS(store storage.Storager) http.HandlerFunc {
 		if err != nil {
 			logger.Log.Error("GetUserURLS", zap.Error(err))
 			http.Error(w, "", http.StatusInternalServerError)
+			return
 		}
 		if len(data) == 0 {
 			http.Error(w, "", http.StatusNoContent)
+			return
 		}
 
 		// порядок важен

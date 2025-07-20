@@ -88,6 +88,10 @@ func (s *storageFile) SetBatch(ctx context.Context, data short2orig, userID stri
 	s.m.Lock()
 	defer s.m.Unlock()
 
+	if _, ok := s.users[userID]; !ok {
+		s.users[userID] = make(short2orig)
+	}
+
 	for key, value := range data {
 		s.short2orig[key] = value
 		// TODO проблема если в data несколько одинаковых значений

@@ -10,13 +10,33 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/serg2014/shortener/internal/app"
+	"github.com/serg2014/shortener/internal/auth"
 	"github.com/serg2014/shortener/internal/logger"
 	"github.com/serg2014/shortener/internal/models"
 	"github.com/serg2014/shortener/internal/storage"
 	"go.uber.org/zap"
 )
 
-//var store = storage.NewStorage(nil)
+// var store = storage.NewStorage(nil)
+
+func createURL(ctx context.Context, store storage.Storager, origURL string, userID string, w http.ResponseWriter) (int, string, error) {
+	if origURL == "" {
+		logger.Log.Debug("empty url")
+		http.Error(w, "empty url", http.StatusBadRequest)
+		return 0, "", errors.New("empty url")
+	}
+	status := http.StatusCreated
+	shortURL, err := app.GenerateShortURL(ctx, store, origURL, userID)
+	if err != nil {
+		if !errors.Is(err, storage.ErrConflict) {
+			logger.Log.Error("can not generate short", zap.Error(err))
+			http.Error(w, "", http.StatusInternalServerError)
+			return 0, "", err
+		}
+		status = http.StatusConflict
+	}
+	return status, shortURL, nil
+}
 
 func CreateURL(store storage.Storager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -26,26 +46,33 @@ func CreateURL(store storage.Storager) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		status := http.StatusCreated
-		shortURL, err := app.GenerateShortURL(r.Context(), store, string(origURL))
+		// TODO check err
+		userID, _ := auth.GetUserID(w, r)
+		status, shortURL, err := createURL(r.Context(), store, string(origURL), userID, w)
 		if err != nil {
-			if !errors.Is(err, storage.ErrConflict) {
-				logger.Log.Error("can not generate short", zap.String("error", err.Error()))
-				http.Error(w, "", http.StatusInternalServerError)
-				return
-			}
-			status = http.StatusConflict
+			// ошибка обработа в createURL и клиенту уже отправили ответ
+			return
 		}
-
+		/*
+			status := http.StatusCreated
+			shortURL, err := app.GenerateShortURL(r.Context(), store, string(origURL))
+			if err != nil {
+				if !errors.Is(err, storage.ErrConflict) {
+					logger.Log.Error("can not generate short", zap.Error(err))
+					http.Error(w, "", http.StatusInternalServerError)
+					return
+				}
+				status = http.StatusConflict
+			}
+		*/
 		w.WriteHeader(status)
 		w.Write([]byte(shortURL))
 	}
 }
 
 // TODO copy paste
-func CreateURL2(store storage.Storager) http.HandlerFunc {
+func CreateURLJson(store storage.Storager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		var req models.Request
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(&req); err != nil {
@@ -53,23 +80,31 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if req.URL == "" {
-			logger.Log.Debug("empty url")
-			http.Error(w, "empty url", http.StatusBadRequest)
+		// TODO check err
+		userID, _ := auth.GetUserID(w, r)
+		status, shortURL, err := createURL(r.Context(), store, req.URL, userID, w)
+		if err != nil {
+			// ошибка обработа в createURL и клиенту уже отправили ответ
 			return
 		}
-
-		status := http.StatusCreated
-		shortURL, err := app.GenerateShortURL(r.Context(), store, req.URL)
-		if err != nil {
-			if !errors.Is(err, storage.ErrConflict) {
-				logger.Log.Error("can not generate short", zap.Error(err))
-				http.Error(w, "", http.StatusInternalServerError)
+		/*
+			if req.URL == "" {
+				logger.Log.Debug("empty url")
+				http.Error(w, "empty url", http.StatusBadRequest)
 				return
 			}
-			status = http.StatusConflict
-		}
 
+			status := http.StatusCreated
+			shortURL, err := app.GenerateShortURL(r.Context(), store, req.URL)
+			if err != nil {
+				if !errors.Is(err, storage.ErrConflict) {
+					logger.Log.Error("can not generate short", zap.Error(err))
+					http.Error(w, "", http.StatusInternalServerError)
+					return
+				}
+				status = http.StatusConflict
+			}
+		*/
 		resp := models.Response{
 			Result: shortURL,
 		}
@@ -78,6 +113,8 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(status)
 		// сериализуем ответ сервера
+		// TODO в случае ошибки сериализации клиенту уже отдали статус 200ок
+		// а тело будет битым. возможно стоит сначала сериализовать. данных мало поэтому кажется ок
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(resp); err != nil {
 			logger.Log.Error("error encoding response", zap.Error(err))
@@ -118,6 +155,8 @@ func Ping(store storage.Storager) http.HandlerFunc {
 // TODO copy paste func CreateURL2
 func CreateURLBatch(store storage.Storager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// TODO check err
+		userID, _ := auth.GetUserID(w, r)
 
 		var req models.RequestBatch
 		dec := json.NewDecoder(r.Body)
@@ -127,11 +166,11 @@ func CreateURLBatch(store storage.Storager) http.HandlerFunc {
 			return
 		}
 		// TODO проверить что прислали урл. correlation_id должен быть уникальным
-		resp, err := app.GenerateShortURLBatch(r.Context(), store, req)
+		resp, err := app.GenerateShortURLBatch(r.Context(), store, req, userID)
 		if err != nil {
 			logger.Log.Error(
 				"can not generate short batch",
-				zap.String("error", err.Error()),
+				zap.Error(err),
 			)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
@@ -143,6 +182,41 @@ func CreateURLBatch(store storage.Storager) http.HandlerFunc {
 		// сериализуем ответ сервера
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(resp); err != nil {
+			logger.Log.Error("error encoding response", zap.Error(err))
+			return
+		}
+	}
+}
+
+func GetUserURLS(store storage.Storager) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, err := auth.GetUserID(w, r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		// TODO странный интерфейс
+		_, err = auth.GetUserIDFromCookie(r)
+		if err != nil {
+			http.Error(w, "", http.StatusUnauthorized)
+			return
+		}
+
+		data, err := store.GetUserURLS(r.Context(), userID)
+		if err != nil {
+			logger.Log.Error("GetUserURLS", zap.Error(err))
+			http.Error(w, "", http.StatusInternalServerError)
+		}
+		if len(data) == 0 {
+			http.Error(w, "", http.StatusNoContent)
+		}
+
+		// порядок важен
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		// сериализуем ответ сервера
+		enc := json.NewEncoder(w)
+		if err := enc.Encode(data); err != nil {
 			logger.Log.Error("error encoding response", zap.Error(err))
 			return
 		}

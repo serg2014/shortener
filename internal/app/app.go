@@ -21,9 +21,9 @@ func generateShortKey() string {
 	return string(shortKey)
 }
 
-func GenerateShortURL(ctx context.Context, store storage.Storager, origURL string) (string, error) {
+func GenerateShortURL(ctx context.Context, store storage.Storager, origURL string, userID string) (string, error) {
 	shortURL := generateShortKey()
-	err := store.Set(ctx, shortURL, origURL)
+	err := store.Set(ctx, shortURL, origURL, userID)
 	if err != nil {
 		if !errors.Is(err, storage.ErrConflict) {
 			return "", err
@@ -45,7 +45,7 @@ func URLTemplate(id string) string {
 	return fmt.Sprintf("%s%s", config.Config.URL(), id)
 }
 
-func GenerateShortURLBatch(ctx context.Context, store storage.Storager, req models.RequestBatch) (models.ResponseBatch, error) {
+func GenerateShortURLBatch(ctx context.Context, store storage.Storager, req models.RequestBatch, userID string) (models.ResponseBatch, error) {
 	resp := make(models.ResponseBatch, len(req))
 	short2orig := make(map[string]string, len(req))
 	for i := range req {
@@ -55,6 +55,6 @@ func GenerateShortURLBatch(ctx context.Context, store storage.Storager, req mode
 		short2orig[id] = req[i].OriginalURL
 	}
 
-	err := store.SetBatch(ctx, short2orig)
+	err := store.SetBatch(ctx, short2orig, userID)
 	return resp, err
 }

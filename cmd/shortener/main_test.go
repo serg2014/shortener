@@ -34,7 +34,7 @@ func testRequest(t *testing.T, ts *httptest.Server, req *http.Request) (*http.Re
 }
 
 func TestGetURL(t *testing.T) {
-	store, _ := storage.NewStorageMemory(nil)
+	store, _ := storage.NewStorageMemory()
 	ts := httptest.NewServer(Router(store))
 	defer ts.Close()
 
@@ -126,7 +126,7 @@ func TestGetURL(t *testing.T) {
 }
 
 func TestCreateURL(t *testing.T) {
-	store, _ := storage.NewStorageMemory(nil)
+	store, _ := storage.NewStorageMemory()
 	ts := httptest.NewServer(Router(store))
 	defer ts.Close()
 

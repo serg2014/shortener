@@ -104,12 +104,12 @@ func (storage *storageDB) GetShort(ctx context.Context, url string) (string, boo
 	return "", false, err
 }
 
-func (storage *storageDB) Set(ctx context.Context, key string, value string, user_id string) error {
+func (storage *storageDB) Set(ctx context.Context, key string, value string, userID string) error {
 	query := `INSERT INTO short2orig (short_url, orig_url, user_id)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (orig_url) DO NOTHING
 	`
-	result, err := storage.db.ExecContext(ctx, query, key, value, user_id)
+	result, err := storage.db.ExecContext(ctx, query, key, value, userID)
 	if err != nil {
 		return err
 	}

@@ -30,7 +30,15 @@ func NewStorageFile(filePath string) (Storager, error) {
 
 	scanner := bufio.NewScanner(file)
 	var item item
-	s := storageFile{file: file, storage: storage{short2orig: make(short2orig), orig2short: make(orig2short)}}
+	s := storageFile{
+		file: file,
+		storage: storage{
+			short2orig: make(short2orig),
+			orig2short: make(orig2short),
+			users:      make(users),
+		},
+	}
+
 	// TODO если строка будет длинной получим ошибку
 	for scanner.Scan() {
 		line := scanner.Bytes()
@@ -56,6 +64,10 @@ func NewStorageFile(filePath string) (Storager, error) {
 		}
 		s.short2orig[item.ShortURL] = item.OriginalURL
 		s.orig2short[item.OriginalURL] = item.ShortURL
+
+		if _, ok := s.users[item.UserID]; !ok {
+			s.users[item.UserID] = make(short2orig)
+		}
 		s.users[item.UserID][item.ShortURL] = item.OriginalURL
 	}
 	if err := scanner.Err(); err != nil {

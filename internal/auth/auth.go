@@ -13,11 +13,11 @@ import (
 	"time"
 )
 
-const COOKIE_NAME = "user_id"
-const TOKEN_SEP = "."
+const CookieName = "user_id"
+const TokenSep = "."
 
-var ErrCookieUserID = fmt.Errorf("no valid cookie %s", COOKIE_NAME)
-var ErrSetCookieUserID = fmt.Errorf("no set-cookie %s", COOKIE_NAME)
+var ErrCookieUserID = fmt.Errorf("no valid cookie %s", CookieName)
+var ErrSetCookieUserID = fmt.Errorf("no set-cookie %s", CookieName)
 
 var SECRET = []byte("somesecret")
 
@@ -36,11 +36,11 @@ func generateUserID() string {
 
 func createToken(value string) string {
 	signature := sign([]byte(value), SECRET)
-	return fmt.Sprintf("%s%s%s", value, TOKEN_SEP, signature)
+	return fmt.Sprintf("%s%s%s", value, TokenSep, signature)
 }
 
 func parseToken(token string) ([]string, error) {
-	items := strings.Split(token, TOKEN_SEP)
+	items := strings.Split(token, TokenSep)
 	if len(items) != 2 {
 		return nil, errors.New("bad token")
 	}
@@ -57,7 +57,7 @@ func isValidToken(token string) bool {
 
 func setCookieUserID(w http.ResponseWriter, value string) {
 	cookie := &http.Cookie{
-		Name:     COOKIE_NAME,
+		Name:     CookieName,
 		Value:    createToken(value),
 		Path:     "/",
 		HttpOnly: true, // Доступ только через HTTP, защита от XSS
@@ -68,7 +68,7 @@ func setCookieUserID(w http.ResponseWriter, value string) {
 }
 
 func GetUserIDFromCookie(r *http.Request) (string, error) {
-	cookie, err := r.Cookie(COOKIE_NAME)
+	cookie, err := r.Cookie(CookieName)
 	if err != nil || !isValidToken(cookie.Value) {
 		return "", ErrCookieUserID
 	}
@@ -90,7 +90,7 @@ func GetUserID(w http.ResponseWriter, r *http.Request) (string, error) {
 			if err != nil {
 				continue
 			}
-			if cookie.Name == COOKIE_NAME {
+			if cookie.Name == CookieName {
 				userID = cookie.Value
 				break
 			}
@@ -111,7 +111,7 @@ func AuthMiddleware(h http.Handler) http.Handler {
 			setCookieUserID(w, userID)
 		}
 		/*
-			cookie, err := r.Cookie(COOKIE_NAME)
+			cookie, err := r.Cookie(CookieName)
 			if err != nil || !IsValidToken(cookie.Value) {
 				setCookieUserID(w, generateUserID())
 			}

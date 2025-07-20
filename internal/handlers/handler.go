@@ -48,6 +48,7 @@ func CreateURL(store storage.Storager) http.HandlerFunc {
 		}
 		// TODO check err
 		userID, _ := auth.GetUserID(w, r)
+		logger.Log.Info("CreateURL", zap.String("userID", userID))
 		status, shortURL, err := createURL(r.Context(), store, string(origURL), userID, w)
 		if err != nil {
 			// ошибка обработа в createURL и клиенту уже отправили ответ
@@ -192,6 +193,7 @@ func GetUserURLS(store storage.Storager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// TODO странный интерфейс
 		userID, err := auth.GetUserIDFromCookie(r)
+		logger.Log.Info("GetUserURLS", zap.String("userID", userID))
 		if err != nil {
 			http.Error(w, "", http.StatusUnauthorized)
 			return

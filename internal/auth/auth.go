@@ -117,12 +117,6 @@ func AuthMiddleware(h http.Handler) http.Handler {
 			userID := generateUserID()
 			setCookieUserID(w, userID)
 		}
-		/*
-			cookie, err := r.Cookie(CookieName)
-			if err != nil || !IsValidToken(cookie.Value) {
-				setCookieUserID(w, generateUserID())
-			}
-		*/
 		// передаём управление хендлеру
 		h.ServeHTTP(w, r)
 	})

@@ -54,18 +54,6 @@ func CreateURL(store storage.Storager) http.HandlerFunc {
 			// ошибка обработа в createURL и клиенту уже отправили ответ
 			return
 		}
-		/*
-			status := http.StatusCreated
-			shortURL, err := app.GenerateShortURL(r.Context(), store, string(origURL))
-			if err != nil {
-				if !errors.Is(err, storage.ErrConflict) {
-					logger.Log.Error("can not generate short", zap.Error(err))
-					http.Error(w, "", http.StatusInternalServerError)
-					return
-				}
-				status = http.StatusConflict
-			}
-		*/
 		w.WriteHeader(status)
 		w.Write([]byte(shortURL))
 	}
@@ -88,24 +76,6 @@ func CreateURLJson(store storage.Storager) http.HandlerFunc {
 			// ошибка обработа в createURL и клиенту уже отправили ответ
 			return
 		}
-		/*
-			if req.URL == "" {
-				logger.Log.Debug("empty url")
-				http.Error(w, "empty url", http.StatusBadRequest)
-				return
-			}
-
-			status := http.StatusCreated
-			shortURL, err := app.GenerateShortURL(r.Context(), store, req.URL)
-			if err != nil {
-				if !errors.Is(err, storage.ErrConflict) {
-					logger.Log.Error("can not generate short", zap.Error(err))
-					http.Error(w, "", http.StatusInternalServerError)
-					return
-				}
-				status = http.StatusConflict
-			}
-		*/
 		resp := models.Response{
 			Result: shortURL,
 		}

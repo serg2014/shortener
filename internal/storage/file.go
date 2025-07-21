@@ -87,26 +87,6 @@ func (s *storageFile) Set(ctx context.Context, key string, value string, userID 
 	return s.saveRow(key, value, userID)
 }
 
-/*
-func (s *storageFile) Set(ctx context.Context, key string, value string, userID string) error {
-	s.m.Lock()
-	defer s.m.Unlock()
-	if _, ok := s.orig2short[value]; ok {
-		return ErrConflict
-	}
-
-	s.short2orig[key] = value
-	s.orig2short[value] = key
-	s.users[userID][key] = value
-
-	err := s.saveRow(key, value, userID)
-	if err != nil {
-		logger.Log.Error("while save row in file", zap.Error(err))
-	}
-	return err
-}
-*/
-
 func (s *storageFile) SetBatch(ctx context.Context, data short2orig, userID string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
@@ -120,6 +100,7 @@ func (s *storageFile) SetBatch(ctx context.Context, data short2orig, userID stri
 		// TODO проблема если в data несколько одинаковых значений
 		s.orig2short[value] = key
 		s.users[userID][key] = value
+		// TODO писать надо чанками
 		err := s.saveRow(key, value, userID)
 		if err != nil {
 			logger.Log.Error("while save row in file", zap.Error(err))

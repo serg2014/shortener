@@ -59,7 +59,7 @@ func (c *config) InitConfig() error {
 	flag.Var(c, "a", "Net address host:port")
 	flag.StringVar(&c.BaseURL, "b", "", "Like http://ya.ru")
 	flag.StringVar(&c.LogLevel, "l", "info", "log level")
-	flag.StringVar(&c.FileStoragePath, "f", "/tmp/shorten_storage", "path to storage file")
+	flag.StringVar(&c.FileStoragePath, "f", "", "path to storage file")
 	flag.StringVar(&c.DatabaseDSN, "d", "", "database dsn")
 	flag.Parse()
 

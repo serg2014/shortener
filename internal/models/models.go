@@ -20,4 +20,10 @@ type ResponseBatchItem struct {
 }
 type ResponseBatch []ResponseBatchItem
 
+type ResponseUserItem struct {
+	OriginalURL string `json:"original_url"`
+	ShortURL    string `json:"short_url"`
+}
+type ResponseUser []ResponseUserItem
+
 // TODO добавить тесты

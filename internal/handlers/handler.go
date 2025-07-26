@@ -10,15 +10,35 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/serg2014/shortener/internal/app"
+	"github.com/serg2014/shortener/internal/auth"
 	"github.com/serg2014/shortener/internal/logger"
 	"github.com/serg2014/shortener/internal/models"
 	"github.com/serg2014/shortener/internal/storage"
 	"go.uber.org/zap"
 )
 
-//var store = storage.NewStorage(nil)
+// var store = storage.NewStorage(nil)
 
-func CreateURL(store storage.Storager) http.HandlerFunc {
+func createURL(ctx context.Context, a *app.MyApp, origURL string, userID string, w http.ResponseWriter) (int, string, error) {
+	if origURL == "" {
+		logger.Log.Debug("empty url")
+		http.Error(w, "empty url", http.StatusBadRequest)
+		return 0, "", errors.New("empty url")
+	}
+	status := http.StatusCreated
+	shortURL, err := a.GenerateShortURL(ctx, origURL, userID)
+	if err != nil {
+		if !errors.Is(err, storage.ErrConflict) {
+			logger.Log.Error("can not generate short", zap.Error(err))
+			http.Error(w, "", http.StatusInternalServerError)
+			return 0, "", err
+		}
+		status = http.StatusConflict
+	}
+	return status, shortURL, nil
+}
+
+func CreateURL(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		origURL, err := io.ReadAll(r.Body)
@@ -26,26 +46,22 @@ func CreateURL(store storage.Storager) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		status := http.StatusCreated
-		shortURL, err := app.GenerateShortURL(r.Context(), store, string(origURL))
+		// TODO check err
+		userID, _ := auth.GetUserID(w, r)
+		logger.Log.Info("CreateURL", zap.String("userID", userID))
+		status, shortURL, err := createURL(r.Context(), a, string(origURL), userID, w)
 		if err != nil {
-			if !errors.Is(err, storage.ErrConflict) {
-				logger.Log.Error("can not generate short", zap.String("error", err.Error()))
-				http.Error(w, "", http.StatusInternalServerError)
-				return
-			}
-			status = http.StatusConflict
+			// ошибка обработа в createURL и клиенту уже отправили ответ
+			return
 		}
-
 		w.WriteHeader(status)
 		w.Write([]byte(shortURL))
 	}
 }
 
 // TODO copy paste
-func CreateURL2(store storage.Storager) http.HandlerFunc {
+func CreateURLJson(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		var req models.Request
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(&req); err != nil {
@@ -53,23 +69,13 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if req.URL == "" {
-			logger.Log.Debug("empty url")
-			http.Error(w, "empty url", http.StatusBadRequest)
+		// TODO check err
+		userID, _ := auth.GetUserID(w, r)
+		status, shortURL, err := createURL(r.Context(), a, req.URL, userID, w)
+		if err != nil {
+			// ошибка обработа в createURL и клиенту уже отправили ответ
 			return
 		}
-
-		status := http.StatusCreated
-		shortURL, err := app.GenerateShortURL(r.Context(), store, req.URL)
-		if err != nil {
-			if !errors.Is(err, storage.ErrConflict) {
-				logger.Log.Error("can not generate short", zap.Error(err))
-				http.Error(w, "", http.StatusInternalServerError)
-				return
-			}
-			status = http.StatusConflict
-		}
-
 		resp := models.Response{
 			Result: shortURL,
 		}
@@ -78,6 +84,8 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(status)
 		// сериализуем ответ сервера
+		// TODO в случае ошибки сериализации клиенту уже отдали статус 200ок
+		// а тело будет битым. возможно стоит сначала сериализовать. данных мало поэтому кажется ок
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(resp); err != nil {
 			logger.Log.Error("error encoding response", zap.Error(err))
@@ -86,13 +94,18 @@ func CreateURL2(store storage.Storager) http.HandlerFunc {
 	}
 }
 
-func GetURL(store storage.Storager) http.HandlerFunc {
+func GetURL(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "key")
-		origURL, ok, err := store.Get(r.Context(), id)
+		origURL, ok, err := a.Get(r.Context(), id)
 		if err != nil {
+			switch {
+			case errors.Is(err, storage.ErrDeleted):
+				http.Error(w, "", http.StatusGone)
+			default:
+				http.Error(w, "", http.StatusInternalServerError)
+			}
 			logger.Log.Error("error in Get", zap.String("error", err.Error()))
-			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
 		if !ok {
@@ -104,11 +117,11 @@ func GetURL(store storage.Storager) http.HandlerFunc {
 	}
 }
 
-func Ping(store storage.Storager) http.HandlerFunc {
+func Ping(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 		defer cancel()
-		if err := store.Ping(ctx); err != nil {
+		if err := a.Ping(ctx); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 
@@ -116,8 +129,10 @@ func Ping(store storage.Storager) http.HandlerFunc {
 }
 
 // TODO copy paste func CreateURL2
-func CreateURLBatch(store storage.Storager) http.HandlerFunc {
+func CreateURLBatch(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// TODO check err
+		userID, _ := auth.GetUserID(w, r)
 
 		var req models.RequestBatch
 		dec := json.NewDecoder(r.Body)
@@ -127,11 +142,11 @@ func CreateURLBatch(store storage.Storager) http.HandlerFunc {
 			return
 		}
 		// TODO проверить что прислали урл. correlation_id должен быть уникальным
-		resp, err := app.GenerateShortURLBatch(r.Context(), store, req)
+		resp, err := a.GenerateShortURLBatch(r.Context(), req, userID)
 		if err != nil {
 			logger.Log.Error(
 				"can not generate short batch",
-				zap.String("error", err.Error()),
+				zap.Error(err),
 			)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
@@ -146,5 +161,70 @@ func CreateURLBatch(store storage.Storager) http.HandlerFunc {
 			logger.Log.Error("error encoding response", zap.Error(err))
 			return
 		}
+	}
+}
+
+func GetUserURLS(a *app.MyApp) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		/*
+			// TODO странный интерфейс
+			userID, err := auth.GetUserIDFromCookie(r)
+			logger.Log.Info("GetUserURLS", zap.String("userID", userID))
+			if err != nil {
+				http.Error(w, "", http.StatusUnauthorized)
+				return
+			}
+		*/
+
+		userID, err := auth.GetUserID(w, r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		data, err := a.GetUserURLS(r.Context(), userID)
+		if err != nil {
+			logger.Log.Error("GetUserURLS", zap.Error(err))
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+		if len(data) == 0 {
+			http.Error(w, "", http.StatusNoContent)
+			return
+		}
+
+		// порядок важен
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		// сериализуем ответ сервера
+		enc := json.NewEncoder(w)
+		if err := enc.Encode(data); err != nil {
+			logger.Log.Error("error encoding response", zap.Error(err))
+			return
+		}
+	}
+}
+
+func DeleteUserURLS(a *app.MyApp) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, err := auth.GetUserID(w, r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var req models.RequestForDeleteURLS
+		dec := json.NewDecoder(r.Body)
+		if err := dec.Decode(&req); err != nil {
+			logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		err = a.DeleteUserURLS(r.Context(), req, userID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusAccepted)
 	}
 }

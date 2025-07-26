@@ -11,12 +11,15 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/serg2014/shortener/internal/app"
 	"github.com/serg2014/shortener/internal/auth"
 	"github.com/serg2014/shortener/internal/config"
 	"github.com/serg2014/shortener/internal/handlers"
 	"github.com/serg2014/shortener/internal/logger"
 	"github.com/serg2014/shortener/internal/storage"
 )
+
+const poolSize = 2
 
 func main() {
 	if err := run(); err != nil {
@@ -64,21 +67,22 @@ func gzipMiddleware(h http.Handler) http.Handler {
 	})
 }
 
-func Router(store storage.Storager) chi.Router {
+func Router(a *app.MyApp) chi.Router {
 	r := chi.NewRouter()
 	//r.Use(middleware.Logger)
 	r.Use(logger.WithLogging)
 	r.Use(auth.AuthMiddleware)
 	r.Use(gzipMiddleware)
 
-	r.Post("/", handlers.CreateURL(store))  // POST /
-	r.Get("/{key}", handlers.GetURL(store)) // GET /Fvdvgfgf
-	r.Post("/api/shorten", handlers.CreateURLJson(store))
+	r.Post("/", handlers.CreateURL(a))  // POST /
+	r.Get("/{key}", handlers.GetURL(a)) // GET /Fvdvgfgf
+	r.Post("/api/shorten", handlers.CreateURLJson(a))
 	//r.Post("/", logger.RequestLogger(CreateURL(store)))  // POST /
 	//r.Get("/{key}", logger.RequestLogger(GetURL(store))) // GET /Fvdvgfgf
-	r.Get("/ping", handlers.Ping(store))
-	r.Post("/api/shorten/batch", handlers.CreateURLBatch(store))
-	r.Get("/api/user/urls", handlers.GetUserURLS(store))
+	r.Get("/ping", handlers.Ping(a))
+	r.Post("/api/shorten/batch", handlers.CreateURLBatch(a))
+	r.Get("/api/user/urls", handlers.GetUserURLS(a))
+	r.Delete("/api/user/urls", handlers.DeleteUserURLS(a))
 	return r
 }
 
@@ -99,6 +103,11 @@ func run() error {
 	}
 	defer store.Close()
 
+	app := app.NewApp(store)
+	for i := 0; i < poolSize; i++ {
+		go app.DeleteUserURLSBackground(ctx)
+	}
+
 	logger.Log.Info("Running server", zap.String("address", config.Config.String()), zap.String("storage", fmt.Sprintf("%T", store)))
-	return http.ListenAndServe(fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port), Router(store))
+	return http.ListenAndServe(fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port), Router(app))
 }

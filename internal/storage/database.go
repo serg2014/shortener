@@ -8,12 +8,14 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/serg2014/shortener/internal/logger"
+	"github.com/serg2014/shortener/internal/models"
 	"go.uber.org/zap"
 )
 
 const KeyLength = 8
 
 var ErrConflict = errors.New("data conflict")
+var ErrDeleted = errors.New("data deleted")
 
 type storageDB struct {
 	db *sql.DB
@@ -31,7 +33,8 @@ func NewStorageDB(ctx context.Context, dsn string) (Storager, error) {
 	query := `CREATE TABLE IF NOT EXISTS short2orig (
 		short_url varchar(` + strconv.Itoa(KeyLength) + `) PRIMARY KEY,
 		orig_url text UNIQUE,
-		user_id text
+		user_id text,
+		is_deleted bool NOT NULL DEFAULT false
 	)`
 	_, err = db.ExecContext(ctx, query)
 	if err != nil {
@@ -48,11 +51,15 @@ func NewStorageDB(ctx context.Context, dsn string) (Storager, error) {
 }
 
 func (storage *storageDB) Get(ctx context.Context, key string) (string, bool, error) {
-	query := "SELECT orig_url FROM short2orig WHERE short_url = $1"
+	query := "SELECT orig_url, is_deleted FROM short2orig WHERE short_url = $1"
 	row := storage.db.QueryRowContext(ctx, query, key)
 	var value string
-	err := row.Scan(&value)
+	var deleted bool
+	err := row.Scan(&value, &deleted)
 	if err == nil {
+		if deleted {
+			return "", false, ErrDeleted
+		}
 		return value, true, nil
 	}
 
@@ -155,4 +162,34 @@ func (storage *storageDB) Close() error {
 
 func (storage *storageDB) Ping(ctx context.Context) error {
 	return storage.db.PingContext(ctx)
+}
+
+func (storage *storageDB) DeleteUserURLS(ctx context.Context, data models.RequestForDeleteURLS, userID string) error {
+	// начать транзакцию
+	tx, err := storage.db.Begin()
+	if err != nil {
+		logger.Log.Error("begin", zap.Error(err))
+		return err
+	}
+	defer tx.Rollback()
+
+	query := `UPDATE short2orig SET is_deleted=true
+		WHERE short_url=$1 and user_id=$2
+	`
+	stmt, err := tx.PrepareContext(ctx, query)
+	if err != nil {
+		logger.Log.Error("prepare", zap.Error(err))
+		return err
+	}
+	defer stmt.Close()
+
+	for i := range data {
+		_, err := stmt.ExecContext(ctx, data[i], userID)
+		if err != nil {
+			logger.Log.Error("update", zap.Error(err))
+		}
+
+	}
+
+	return tx.Commit()
 }

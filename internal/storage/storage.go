@@ -4,6 +4,8 @@ import (
 	"context"
 	"maps"
 	"sync"
+
+	"github.com/serg2014/shortener/internal/models"
 )
 
 type short2orig map[string]string
@@ -15,6 +17,11 @@ type storage struct {
 	short2orig short2orig
 	orig2short orig2short
 	m          sync.RWMutex
+}
+
+type Message struct {
+	UserID   string
+	ShortURL []string
 }
 
 func NewStorage(ctx context.Context, filePath string, dsn string) (Storager, error) {
@@ -110,6 +117,11 @@ func (s *storage) Ping(ctx context.Context) error {
 	return nil
 }
 
+func (s *storage) DeleteUserURLS(ctx context.Context, req models.RequestForDeleteURLS, userID string) error {
+	// TODO
+	return nil
+}
+
 type Storager interface {
 	Get(ctx context.Context, key string) (string, bool, error)
 	GetUserURLS(ctx context.Context, userID string) ([]item, error)
@@ -118,4 +130,5 @@ type Storager interface {
 	SetBatch(ctx context.Context, data short2orig, userID string) error
 	Close() error
 	Ping(ctx context.Context) error
+	DeleteUserURLS(ctx context.Context, req models.RequestForDeleteURLS, userID string) error
 }

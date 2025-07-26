@@ -26,4 +26,6 @@ type ResponseUserItem struct {
 }
 type ResponseUser []ResponseUserItem
 
+type RequestForDeleteURLS []string
+
 // TODO добавить тесты

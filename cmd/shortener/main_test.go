@@ -35,7 +35,8 @@ func testRequest(t *testing.T, ts *httptest.Server, req *http.Request) (*http.Re
 
 func TestGetURL(t *testing.T) {
 	store, _ := storage.NewStorageMemory()
-	ts := httptest.NewServer(Router(store))
+	a := app.NewApp(store)
+	ts := httptest.NewServer(Router(a))
 	defer ts.Close()
 
 	type want struct {
@@ -87,7 +88,7 @@ func TestGetURL(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			if test.store.key != "" {
 				userID := ""
-				store.Set(context.Background(), test.store.key, test.store.value, userID)
+				a.Set(context.Background(), test.store.key, test.store.value, userID)
 			}
 			req, err := http.NewRequest(test.reqParam.method, ts.URL+test.reqParam.url, test.reqParam.body)
 			require.NoError(t, err)
@@ -128,7 +129,8 @@ func TestGetURL(t *testing.T) {
 
 func TestCreateURL(t *testing.T) {
 	store, _ := storage.NewStorageMemory()
-	ts := httptest.NewServer(Router(store))
+	a := app.NewApp(store)
+	ts := httptest.NewServer(Router(a))
 	defer ts.Close()
 
 	type want struct {
@@ -186,7 +188,7 @@ func TestCreateURL(t *testing.T) {
 
 			id, ok := strings.CutPrefix(string(respBody), test.want.response)
 			if assert.True(t, ok) {
-				val, ok, err := store.Get(context.Background(), id)
+				val, ok, err := a.Get(context.Background(), id)
 				assert.NoError(t, err)
 				assert.True(t, ok)
 				assert.Equal(t, test.store.value, val)

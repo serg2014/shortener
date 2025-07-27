@@ -19,7 +19,7 @@ const TokenSep = "."
 var ErrCookieUserID = fmt.Errorf("no valid cookie %s", CookieName)
 var ErrSetCookieUserID = fmt.Errorf("no set-cookie %s", CookieName)
 
-var SECRET = []byte("somesecret")
+var secret = []byte("somesecret")
 
 func sign(value, key []byte) string {
 	h := hmac.New(sha256.New, key)
@@ -35,7 +35,7 @@ func generateUserID() string {
 }
 
 func createToken(value string) string {
-	signature := sign([]byte(value), SECRET)
+	signature := sign([]byte(value), secret)
 	return fmt.Sprintf("%s%s%s", value, TokenSep, signature)
 }
 
@@ -52,7 +52,7 @@ func isValidToken(token string) bool {
 	if err != nil {
 		return false
 	}
-	return sign([]byte(items[0]), SECRET) == items[1]
+	return sign([]byte(items[0]), secret) == items[1]
 }
 
 func setCookieUserID(w http.ResponseWriter, value string) {

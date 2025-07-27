@@ -106,7 +106,7 @@ func run() error {
 
 	app := app.NewApp(store)
 	for i := 0; i < poolSize; i++ {
-		go app.DeleteUserURLSBackground(ctx)
+		go app.DeleteUserURLsBackground(ctx)
 	}
 
 	logger.Log.Info("Running server", zap.String("address", config.Config.String()), zap.String("storage", fmt.Sprintf("%T", store)))

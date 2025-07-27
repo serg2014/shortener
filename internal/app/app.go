@@ -98,7 +98,7 @@ func (a *MyApp) DeleteUserURLS(ctx context.Context, req models.RequestForDeleteU
 	return nil
 }
 
-func (a *MyApp) DeleteUserURLSBackground(ctx context.Context) {
+func (a *MyApp) DeleteUserURLsBackground(ctx context.Context) {
 	for {
 		select {
 		case mes := <-a.msgChan:

@@ -14,11 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io.Reader) (*http.Response, string) {
 func testRequest(t *testing.T, ts *httptest.Server, req *http.Request) (*http.Response, string) {
-	//req, err := http.NewRequest(method, ts.URL+path, body)
-	//require.NoError(t, err)
-
 	client := ts.Client()
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 		return http.ErrUseLastResponse
@@ -34,7 +30,9 @@ func testRequest(t *testing.T, ts *httptest.Server, req *http.Request) (*http.Re
 }
 
 func TestGetURL(t *testing.T) {
-	store, _ := storage.NewStorageMemory()
+	store, err := storage.NewStorageMemory()
+	require.NoError(t, err)
+
 	a := app.NewApp(store)
 	ts := httptest.NewServer(Router(a))
 	defer ts.Close()
@@ -128,7 +126,9 @@ func TestGetURL(t *testing.T) {
 }
 
 func TestCreateURL(t *testing.T) {
-	store, _ := storage.NewStorageMemory()
+	store, err := storage.NewStorageMemory()
+	require.NoError(t, err)
+
 	a := app.NewApp(store)
 	ts := httptest.NewServer(Router(a))
 	defer ts.Close()

@@ -60,8 +60,7 @@ func setCookieUserID(w http.ResponseWriter, value string) {
 		Name:     CookieName,
 		Value:    createToken(value),
 		Path:     "/",
-		HttpOnly: true, // Доступ только через HTTP, защита от XSS
-		// Secure:   true,                    // Только HTTPS
+		HttpOnly: true,                    // Доступ только через HTTP, защита от XSS
 		SameSite: http.SameSiteStrictMode, // Защита от CSRF
 	}
 	http.SetCookie(w, cookie)

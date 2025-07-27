@@ -178,7 +178,8 @@ func GetUserURLS(a *app.MyApp) http.HandlerFunc {
 
 		userID, err := auth.GetUserID(w, r)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			logger.Log.Error("GetUserID", zap.Error(err))
+			http.Error(w, "bad user", http.StatusInternalServerError)
 			return
 		}
 		data, err := a.GetUserURLS(r.Context(), userID)

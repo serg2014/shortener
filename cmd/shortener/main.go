@@ -19,7 +19,8 @@ import (
 	"github.com/serg2014/shortener/internal/storage"
 )
 
-const poolSize = 2
+// TODO вынести в конфиг
+const poolSize = 10
 
 func main() {
 	if err := run(); err != nil {

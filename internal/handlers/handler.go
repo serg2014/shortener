@@ -166,16 +166,6 @@ func CreateURLBatch(a *app.MyApp) http.HandlerFunc {
 
 func GetUserURLS(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		/*
-			// TODO странный интерфейс
-			userID, err := auth.GetUserIDFromCookie(r)
-			logger.Log.Info("GetUserURLS", zap.String("userID", userID))
-			if err != nil {
-				http.Error(w, "", http.StatusUnauthorized)
-				return
-			}
-		*/
-
 		userID, err := auth.GetUserID(w, r)
 		if err != nil {
 			logger.Log.Error("GetUserID", zap.Error(err))

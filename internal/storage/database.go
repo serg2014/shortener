@@ -73,7 +73,7 @@ func (storage *storageDB) GetUserURLS(ctx context.Context, userID string) ([]ite
 	query := "SELECT short_url, orig_url FROM short2orig WHERE user_id = $1"
 	rows, err := storage.db.QueryContext(ctx, query, userID)
 	if err != nil {
-		logger.Log.Info("some error", zap.Error(err))
+		logger.Log.Info("select user urls", zap.Error(err))
 		return nil, err
 	}
 	// обязательно закрываем перед возвратом функции

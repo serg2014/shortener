@@ -46,9 +46,12 @@ func CreateURL(a *app.MyApp) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		// TODO check err
-		userID, _ := auth.GetUserID(w, r)
-		logger.Log.Info("CreateURL", zap.String("userID", userID))
+		userID, err := auth.GetUserID(w, r)
+		if err != nil {
+			logger.Log.Error("can not find userid", zap.Error(err))
+			http.Error(w, "bad user", http.StatusInternalServerError)
+			return
+		}
 		status, shortURL, err := createURL(r.Context(), a, string(origURL), userID, w)
 		if err != nil {
 			// ошибка обработа в createURL и клиенту уже отправили ответ

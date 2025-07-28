@@ -42,20 +42,15 @@ func createToken(value UserID) string {
 	return fmt.Sprintf("%s%s%s", value, TokenSep, signature)
 }
 
-func parseToken(token string) ([]string, error) {
+func checkToken(token string) (UserID, error) {
 	items := strings.Split(token, TokenSep)
 	if len(items) != 2 {
-		return nil, errors.New("bad token")
+		return "", errors.New("bad token")
 	}
-	return items, nil
-}
-
-func isValidToken(token string) bool {
-	items, err := parseToken(token)
-	if err != nil {
-		return false
+	if sign([]byte(items[0]), secret) != items[1] {
+		return "", errors.New("bad signature")
 	}
-	return sign([]byte(items[0]), secret) == items[1]
+	return UserID(items[0]), nil
 }
 
 func setCookieUserID(w http.ResponseWriter, value UserID) {
@@ -71,14 +66,14 @@ func setCookieUserID(w http.ResponseWriter, value UserID) {
 
 func GetUserIDFromCookie(r *http.Request) (UserID, error) {
 	cookie, err := r.Cookie(CookieName)
-	if err != nil || !isValidToken(cookie.Value) {
+	if err != nil {
 		return "", ErrCookieUserID
 	}
-	items, err := parseToken(cookie.Value)
+	userID, err := checkToken(cookie.Value)
 	if err != nil {
 		return "", err
 	}
-	return UserID(items[0]), nil
+	return userID, nil
 }
 
 type userCtxKeyType string

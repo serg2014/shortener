@@ -30,7 +30,8 @@ func createURL(ctx context.Context, a *app.MyApp, origURL string, userID auth.Us
 	if err != nil {
 		if !errors.Is(err, storage.ErrConflict) {
 			logger.Log.Error("can not generate short", zap.Error(err))
-			http.Error(w, "", http.StatusInternalServerError)
+			code := http.StatusInternalServerError
+			http.Error(w, http.StatusText(code), code)
 			return 0, "", err
 		}
 		status = http.StatusConflict
@@ -48,7 +49,8 @@ func CreateURL(a *app.MyApp) http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/plain")
 		origURL, err := io.ReadAll(r.Body)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			logger.Log.Error("bad input", zap.Error(err))
+			http.Error(w, "bad input", http.StatusBadRequest)
 			return
 		}
 		userID, err := auth.GetUserID(r.Context())
@@ -73,7 +75,7 @@ func CreateURLJson(a *app.MyApp) http.HandlerFunc {
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(&req); err != nil {
 			logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "bad json", http.StatusBadRequest)
 			return
 		}
 		userID, err := auth.GetUserID(r.Context())
@@ -108,18 +110,20 @@ func GetURL(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "key")
 		origURL, ok, err := a.Get(r.Context(), id)
+		var code int
 		if err != nil {
 			switch {
 			case errors.Is(err, storage.ErrDeleted):
-				http.Error(w, "", http.StatusGone)
+				code = http.StatusGone
 			default:
-				http.Error(w, "", http.StatusInternalServerError)
+				code = http.StatusInternalServerError
 			}
-			logger.Log.Error("error in Get", zap.String("error", err.Error()))
+			logger.Log.Error("error in a.Get", zap.Error(err))
+			http.Error(w, http.StatusText(code), code)
 			return
 		}
 		if !ok {
-			http.Error(w, "bad id", http.StatusBadRequest)
+			http.Error(w, "bad short url", http.StatusBadRequest)
 			return
 		}
 		w.Header().Set("Content-Type", "text/plain")
@@ -132,7 +136,9 @@ func Ping(a *app.MyApp) http.HandlerFunc {
 		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 		defer cancel()
 		if err := a.Ping(ctx); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			logger.Log.Error("ping", zap.Error(err))
+			code := http.StatusInternalServerError
+			http.Error(w, http.StatusText(code), code)
 		}
 
 	}
@@ -141,7 +147,6 @@ func Ping(a *app.MyApp) http.HandlerFunc {
 // TODO copy paste func CreateURL2
 func CreateURLBatch(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// TODO check err
 		userID, err := auth.GetUserID(r.Context())
 		if err != nil {
 			noUser(w, err)
@@ -152,7 +157,7 @@ func CreateURLBatch(a *app.MyApp) http.HandlerFunc {
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(&req); err != nil {
 			logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "bad json", http.StatusBadRequest)
 			return
 		}
 		// TODO проверить что прислали урл. correlation_id должен быть уникальным
@@ -162,7 +167,8 @@ func CreateURLBatch(a *app.MyApp) http.HandlerFunc {
 				"can not generate short batch",
 				zap.Error(err),
 			)
-			http.Error(w, "", http.StatusInternalServerError)
+			code := http.StatusInternalServerError
+			http.Error(w, http.StatusText(code), code)
 			return
 		}
 
@@ -188,11 +194,13 @@ func GetUserURLS(a *app.MyApp) http.HandlerFunc {
 		data, err := a.GetUserURLS(r.Context(), userID)
 		if err != nil {
 			logger.Log.Error("GetUserURLS", zap.Error(err))
-			http.Error(w, "", http.StatusInternalServerError)
+			code := http.StatusInternalServerError
+			http.Error(w, http.StatusText(code), code)
 			return
 		}
 		if len(data) == 0 {
-			http.Error(w, "", http.StatusNoContent)
+			code := http.StatusNoContent
+			http.Error(w, http.StatusText(code), code)
 			return
 		}
 
@@ -220,13 +228,16 @@ func DeleteUserURLS(a *app.MyApp) http.HandlerFunc {
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(&req); err != nil {
 			logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			code := http.StatusBadRequest
+			http.Error(w, http.StatusText(code), code)
 			return
 		}
 
 		err = a.DeleteUserURLS(r.Context(), req, userID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			logger.Log.Error("DeleteUserURLS", zap.Error(err))
+			code := http.StatusInternalServerError
+			http.Error(w, http.StatusText(code), code)
 			return
 		}
 		w.WriteHeader(http.StatusAccepted)

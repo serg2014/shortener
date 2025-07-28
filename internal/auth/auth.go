@@ -102,7 +102,9 @@ func AuthMiddleware(h http.Handler) http.Handler {
 		}
 		// сохраним в контекст
 		ctx := WithUser(r.Context(), &userID)
-		r = r.WithContext(ctx)
+		// TODO может надо Clone
+		r2 := r.WithContext(ctx)
+		*r = *r2
 
 		// передаём управление хендлеру
 		h.ServeHTTP(w, r)

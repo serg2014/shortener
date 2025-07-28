@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 
+	"github.com/serg2014/shortener/internal/auth"
 	"github.com/serg2014/shortener/internal/config"
 	"github.com/serg2014/shortener/internal/logger"
 	"github.com/serg2014/shortener/internal/models"
@@ -37,9 +38,9 @@ func generateShortKey() string {
 	return string(shortKey)
 }
 
-func (a *MyApp) GenerateShortURL(ctx context.Context, origURL string, userID string) (string, error) {
+func (a *MyApp) GenerateShortURL(ctx context.Context, origURL string, userID auth.UserID) (string, error) {
 	shortURL := generateShortKey()
-	err := a.store.Set(ctx, shortURL, origURL, userID)
+	err := a.store.Set(ctx, shortURL, origURL, string(userID))
 	if err != nil {
 		if !errors.Is(err, storage.ErrConflict) {
 			return "", err
@@ -61,7 +62,7 @@ func URLTemplate(id string) string {
 	return fmt.Sprintf("%s%s", config.Config.URL(), id)
 }
 
-func (a *MyApp) GenerateShortURLBatch(ctx context.Context, req models.RequestBatch, userID string) (models.ResponseBatch, error) {
+func (a *MyApp) GenerateShortURLBatch(ctx context.Context, req models.RequestBatch, userID auth.UserID) (models.ResponseBatch, error) {
 	resp := make(models.ResponseBatch, len(req))
 	short2orig := make(map[string]string, len(req))
 	for i := range req {
@@ -71,12 +72,12 @@ func (a *MyApp) GenerateShortURLBatch(ctx context.Context, req models.RequestBat
 		short2orig[id] = req[i].OriginalURL
 	}
 
-	err := a.store.SetBatch(ctx, short2orig, userID)
+	err := a.store.SetBatch(ctx, short2orig, string(userID))
 	return resp, err
 }
 
-func (a *MyApp) GetUserURLS(ctx context.Context, userID string) (models.ResponseUser, error) {
-	data, err := a.store.GetUserURLS(ctx, userID)
+func (a *MyApp) GetUserURLS(ctx context.Context, userID auth.UserID) (models.ResponseUser, error) {
+	data, err := a.store.GetUserURLS(ctx, string(userID))
 	if err != nil {
 		return nil, err
 	}
@@ -88,11 +89,11 @@ func (a *MyApp) GetUserURLS(ctx context.Context, userID string) (models.Response
 	return resp, nil
 }
 
-func (a *MyApp) DeleteUserURLS(ctx context.Context, req models.RequestForDeleteURLS, userID string) error {
+func (a *MyApp) DeleteUserURLS(ctx context.Context, req models.RequestForDeleteURLS, userID auth.UserID) error {
 	// TODO uniq input
 	// TODO req может быть большим, можно побить на чанки
 	a.msgChan <- storage.Message{
-		UserID:   userID,
+		UserID:   string(userID),
 		ShortURL: req,
 	}
 	return nil
@@ -116,8 +117,8 @@ func (a *MyApp) Get(ctx context.Context, id string) (string, bool, error) {
 	return a.store.Get(ctx, id)
 }
 
-func (a *MyApp) Set(ctx context.Context, key, value, userID string) error {
-	return a.store.Set(ctx, key, value, userID)
+func (a *MyApp) Set(ctx context.Context, key, value string, userID auth.UserID) error {
+	return a.store.Set(ctx, key, value, string(userID))
 }
 
 func (a *MyApp) Ping(ctx context.Context) error {

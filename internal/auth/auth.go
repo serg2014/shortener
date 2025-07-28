@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
@@ -16,8 +17,10 @@ import (
 const CookieName = "user_id"
 const TokenSep = "."
 
+type UserID string
+
 var ErrCookieUserID = fmt.Errorf("no valid cookie %s", CookieName)
-var ErrSetCookieUserID = fmt.Errorf("no set-cookie %s", CookieName)
+var ErrUserIDFromContext = fmt.Errorf("no userid in context")
 
 var secret = []byte("somesecret")
 
@@ -27,14 +30,14 @@ func sign(value, key []byte) string {
 	return base64.RawStdEncoding.EncodeToString(h.Sum(nil))
 }
 
-func generateUserID() string {
+func generateUserID() UserID {
 	time := strconv.FormatInt(time.Now().Unix(), 10)
 	b := make([]byte, 16)
 	rand.Read(b)
-	return base64.RawStdEncoding.EncodeToString([]byte(time)) + base64.RawStdEncoding.EncodeToString(b)
+	return UserID(base64.RawStdEncoding.EncodeToString([]byte(time)) + base64.RawStdEncoding.EncodeToString(b))
 }
 
-func createToken(value string) string {
+func createToken(value UserID) string {
 	signature := sign([]byte(value), secret)
 	return fmt.Sprintf("%s%s%s", value, TokenSep, signature)
 }
@@ -55,7 +58,7 @@ func isValidToken(token string) bool {
 	return sign([]byte(items[0]), secret) == items[1]
 }
 
-func setCookieUserID(w http.ResponseWriter, value string) {
+func setCookieUserID(w http.ResponseWriter, value UserID) {
 	cookie := &http.Cookie{
 		Name:     CookieName,
 		Value:    createToken(value),
@@ -66,7 +69,7 @@ func setCookieUserID(w http.ResponseWriter, value string) {
 	http.SetCookie(w, cookie)
 }
 
-func GetUserIDFromCookie(r *http.Request) (string, error) {
+func GetUserIDFromCookie(r *http.Request) (UserID, error) {
 	cookie, err := r.Cookie(CookieName)
 	if err != nil || !isValidToken(cookie.Value) {
 		return "", ErrCookieUserID
@@ -75,47 +78,37 @@ func GetUserIDFromCookie(r *http.Request) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return items[0], nil
+	return UserID(items[0]), nil
 }
 
-func GetUserID(w http.ResponseWriter, r *http.Request) (string, error) {
-	userID, err := GetUserIDFromCookie(r)
-	if err == nil {
-		return userID, nil
-	}
+type userCtxKeyType string
 
-	httpHeader := w.Header()
-	values := httpHeader.Values("Set-Cookie")
-	if len(values) != 0 {
-		for _, val := range values {
-			cookie, err := http.ParseSetCookie(val)
-			if err != nil {
-				continue
-			}
-			if cookie.Name == CookieName {
-				items, err := parseToken(cookie.Value)
-				if err != nil {
-					return "", err
-				}
-				userID = items[0]
-				break
-			}
-		}
-	}
-	if userID == "" {
-		return "", ErrSetCookieUserID
-	}
+const userCtxKey userCtxKeyType = "userID"
 
-	return userID, nil
+func WithUser(ctx context.Context, userID *UserID) context.Context {
+	return context.WithValue(ctx, userCtxKey, userID)
+}
+
+// TODO ptr
+func GetUserID(ctx context.Context) (UserID, error) {
+	userID, ok := ctx.Value(userCtxKey).(*UserID)
+	if !ok {
+		return "", ErrUserIDFromContext
+	}
+	return *userID, nil
 }
 
 func AuthMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := GetUserIDFromCookie(r)
+		userID, err := GetUserIDFromCookie(r)
 		if err != nil {
-			userID := generateUserID()
+			userID = generateUserID()
 			setCookieUserID(w, userID)
 		}
+		// сохраним в контекст
+		ctx := WithUser(r.Context(), &userID)
+		r = r.WithContext(ctx)
+
 		// передаём управление хендлеру
 		h.ServeHTTP(w, r)
 	})

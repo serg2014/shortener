@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/serg2014/shortener/internal/app"
+	"github.com/serg2014/shortener/internal/auth"
 	"github.com/serg2014/shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -85,7 +86,7 @@ func TestGetURL(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			if test.store.key != "" {
 				userID := ""
-				a.Set(t.Context(), test.store.key, test.store.value, userID)
+				a.Set(t.Context(), test.store.key, test.store.value, auth.UserID(userID))
 			}
 			req, err := http.NewRequest(test.reqParam.method, ts.URL+test.reqParam.url, test.reqParam.body)
 			require.NoError(t, err)

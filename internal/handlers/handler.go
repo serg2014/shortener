@@ -19,7 +19,7 @@ import (
 
 // var store = storage.NewStorage(nil)
 
-func createURL(ctx context.Context, a *app.MyApp, origURL string, userID string, w http.ResponseWriter) (int, string, error) {
+func createURL(ctx context.Context, a *app.MyApp, origURL string, userID auth.UserID, w http.ResponseWriter) (int, string, error) {
 	if origURL == "" {
 		logger.Log.Debug("empty url")
 		http.Error(w, "empty url", http.StatusBadRequest)
@@ -38,6 +38,11 @@ func createURL(ctx context.Context, a *app.MyApp, origURL string, userID string,
 	return status, shortURL, nil
 }
 
+func noUser(w http.ResponseWriter, err error) {
+	logger.Log.Error("can not find userid", zap.Error(err))
+	http.Error(w, "no user", http.StatusInternalServerError)
+}
+
 func CreateURL(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
@@ -46,10 +51,9 @@ func CreateURL(a *app.MyApp) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		userID, err := auth.GetUserID(w, r)
+		userID, err := auth.GetUserID(r.Context())
 		if err != nil {
-			logger.Log.Error("can not find userid", zap.Error(err))
-			http.Error(w, "bad user", http.StatusInternalServerError)
+			noUser(w, err)
 			return
 		}
 		status, shortURL, err := createURL(r.Context(), a, string(origURL), userID, w)
@@ -72,8 +76,11 @@ func CreateURLJson(a *app.MyApp) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		// TODO check err
-		userID, _ := auth.GetUserID(w, r)
+		userID, err := auth.GetUserID(r.Context())
+		if err != nil {
+			noUser(w, err)
+			return
+		}
 		status, shortURL, err := createURL(r.Context(), a, req.URL, userID, w)
 		if err != nil {
 			// ошибка обработа в createURL и клиенту уже отправили ответ
@@ -135,7 +142,11 @@ func Ping(a *app.MyApp) http.HandlerFunc {
 func CreateURLBatch(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// TODO check err
-		userID, _ := auth.GetUserID(w, r)
+		userID, err := auth.GetUserID(r.Context())
+		if err != nil {
+			noUser(w, err)
+			return
+		}
 
 		var req models.RequestBatch
 		dec := json.NewDecoder(r.Body)
@@ -169,10 +180,9 @@ func CreateURLBatch(a *app.MyApp) http.HandlerFunc {
 
 func GetUserURLS(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID, err := auth.GetUserID(w, r)
+		userID, err := auth.GetUserID(r.Context())
 		if err != nil {
-			logger.Log.Error("GetUserID", zap.Error(err))
-			http.Error(w, "bad user", http.StatusInternalServerError)
+			noUser(w, err)
 			return
 		}
 		data, err := a.GetUserURLS(r.Context(), userID)
@@ -200,9 +210,9 @@ func GetUserURLS(a *app.MyApp) http.HandlerFunc {
 
 func DeleteUserURLS(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID, err := auth.GetUserID(w, r)
+		userID, err := auth.GetUserID(r.Context())
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			noUser(w, err)
 			return
 		}
 

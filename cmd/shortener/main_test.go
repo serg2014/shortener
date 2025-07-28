@@ -64,7 +64,7 @@ func TestGetURL(t *testing.T) {
 			name: "test 1",
 			want: want{
 				statusCode:  http.StatusBadRequest,
-				response:    "bad id\n",
+				response:    "bad short url\n",
 				contentType: "text/plain; charset=utf-8",
 			},
 			reqParam: reqParam{http.MethodGet, "/abcdef12", nil, map[string]string{"Accept-Encoding": ""}},

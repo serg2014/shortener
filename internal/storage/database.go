@@ -43,8 +43,11 @@ func NewStorageDB(ctx context.Context, dsn string) (Storager, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO file://migrations путь задается относительно cwd
+	// предполагается что запуск бинаря происходит в корне репозитория
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://../../migrations",
+		"file://migrations",
 		dsn,
 		driver,
 	)

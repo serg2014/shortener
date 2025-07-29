@@ -78,7 +78,7 @@ func (storage *storageDB) Get(ctx context.Context, key string) (string, bool, er
 	if err == sql.ErrNoRows {
 		return "", false, nil
 	}
-	return "", false, err
+	return "", false, fmt.Errorf("failed get shorturl: %w", err)
 }
 
 func (storage *storageDB) GetUserURLS(ctx context.Context, userID string) ([]item, error) {
@@ -86,7 +86,7 @@ func (storage *storageDB) GetUserURLS(ctx context.Context, userID string) ([]ite
 	rows, err := storage.db.QueryContext(ctx, query, userID)
 	if err != nil {
 		logger.Log.Info("select user urls", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("failed GetUserURLS: %w", err)
 	}
 	// обязательно закрываем перед возвратом функции
 	defer rows.Close()
@@ -97,13 +97,13 @@ func (storage *storageDB) GetUserURLS(ctx context.Context, userID string) ([]ite
 		var item item
 		err = rows.Scan(&item.ShortURL, &item.OriginalURL)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed GetUserURLS: %w", err)
 		}
 		result = append(result, item)
 	}
 	err = rows.Err()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed GetUserURLS: %w", err)
 	}
 	return result, nil
 }
@@ -120,7 +120,7 @@ func (storage *storageDB) GetShort(ctx context.Context, url string) (string, boo
 	if err == sql.ErrNoRows {
 		return "", false, nil
 	}
-	return "", false, err
+	return "", false, fmt.Errorf("failed GetShort: %w", err)
 }
 
 func (storage *storageDB) Set(ctx context.Context, key string, value string, userID string) error {
@@ -130,21 +130,21 @@ func (storage *storageDB) Set(ctx context.Context, key string, value string, use
 	`
 	result, err := storage.db.ExecContext(ctx, query, key, value, userID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed Set: %w", err)
 	}
 	ra, _ := result.RowsAffected()
 	if ra == 0 {
 		return ErrConflict
 	}
 
-	return err
+	return nil
 }
 
 func (storage *storageDB) SetBatch(ctx context.Context, data short2orig, userID string) error {
 	// начать транзакцию
 	tx, err := storage.db.Begin()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed SetBatch: %w", err)
 	}
 	defer tx.Rollback()
 
@@ -154,18 +154,21 @@ func (storage *storageDB) SetBatch(ctx context.Context, data short2orig, userID 
 	`
 	stmt, err := tx.PrepareContext(ctx, query)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed SetBatch: %w", err)
 	}
 	defer stmt.Close()
 
 	for key, value := range data {
 		_, err := stmt.ExecContext(ctx, key, value, userID)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed SetBatch: %w", err)
 		}
 	}
-
-	return tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("failed SetBatch: %w", err)
+	}
+	return nil
 }
 
 func (storage *storageDB) Close() error {
@@ -173,7 +176,11 @@ func (storage *storageDB) Close() error {
 }
 
 func (storage *storageDB) Ping(ctx context.Context) error {
-	return storage.db.PingContext(ctx)
+	err := storage.db.PingContext(ctx)
+	if err != nil {
+		return fmt.Errorf("failed Ping: %w", err)
+	}
+	return nil
 }
 
 func (storage *storageDB) DeleteUserURLS(ctx context.Context, data models.RequestForDeleteURLS, userID string) error {
@@ -181,7 +188,7 @@ func (storage *storageDB) DeleteUserURLS(ctx context.Context, data models.Reques
 	tx, err := storage.db.Begin()
 	if err != nil {
 		logger.Log.Error("begin", zap.Error(err))
-		return err
+		return fmt.Errorf("failed DeleteUserURLS: %w", err)
 	}
 	defer tx.Rollback()
 
@@ -191,7 +198,7 @@ func (storage *storageDB) DeleteUserURLS(ctx context.Context, data models.Reques
 	stmt, err := tx.PrepareContext(ctx, query)
 	if err != nil {
 		logger.Log.Error("prepare", zap.Error(err))
-		return err
+		return fmt.Errorf("failed DeleteUserURLS: %w", err)
 	}
 	defer stmt.Close()
 
@@ -202,6 +209,9 @@ func (storage *storageDB) DeleteUserURLS(ctx context.Context, data models.Reques
 		}
 
 	}
-
-	return tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("failed DeleteUserURLS: %w", err)
+	}
+	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/golang-migrate/migrate"
 	"github.com/golang-migrate/migrate/database/postgres"
@@ -31,6 +32,11 @@ func NewStorageDB(ctx context.Context, dsn string) (Storager, error) {
 	if err != nil {
 		return nil, err
 	}
+	// проверяем подключение к бд
+	if err = db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping db: %v", err)
+	}
+	logger.Log.Info("Connected to db")
 
 	// миграции
 	driver, err := postgres.WithInstance(db, &postgres.Config{})

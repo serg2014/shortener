@@ -4,14 +4,17 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strconv"
 
+	"github.com/golang-migrate/migrate"
+	"github.com/golang-migrate/migrate/database/postgres"
+	_ "github.com/golang-migrate/migrate/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/serg2014/shortener/internal/logger"
 	"github.com/serg2014/shortener/internal/models"
 	"go.uber.org/zap"
 )
 
+// размер столбца short_url в таблице short2orig
 const KeyLength = 8
 
 var ErrConflict = errors.New("data conflict")
@@ -29,21 +32,21 @@ func NewStorageDB(ctx context.Context, dsn string) (Storager, error) {
 		return nil, err
 	}
 
-	// TODO сделать через миграцию
-	query := `CREATE TABLE IF NOT EXISTS short2orig (
-		short_url varchar(` + strconv.Itoa(KeyLength) + `) PRIMARY KEY,
-		orig_url text UNIQUE,
-		user_id text,
-		is_deleted bool NOT NULL DEFAULT false
-	)`
-	_, err = db.ExecContext(ctx, query)
+	// миграции
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
 		return nil, err
 	}
-
-	query = `CREATE INDEX IF NOT EXISTS user_id ON short2orig (user_id)`
-	_, err = db.ExecContext(ctx, query)
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://../../migrations",
+		dsn,
+		driver,
+	)
 	if err != nil {
+		return nil, err
+	}
+	if err = m.Up(); err != nil && err != migrate.ErrNoChange {
+		//logger.Log.Fatal("failed to apply migrations", zap.Error(err))
 		return nil, err
 	}
 

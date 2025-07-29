@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS short2orig_user_id_key;

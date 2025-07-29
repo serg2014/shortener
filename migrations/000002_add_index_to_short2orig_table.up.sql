@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS short2orig_user_id_key ON short2orig (user_id);

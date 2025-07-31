@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -9,16 +8,13 @@ import (
 	"testing"
 
 	"github.com/serg2014/shortener/internal/app"
+	"github.com/serg2014/shortener/internal/auth"
 	"github.com/serg2014/shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io.Reader) (*http.Response, string) {
 func testRequest(t *testing.T, ts *httptest.Server, req *http.Request) (*http.Response, string) {
-	//req, err := http.NewRequest(method, ts.URL+path, body)
-	//require.NoError(t, err)
-
 	client := ts.Client()
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 		return http.ErrUseLastResponse
@@ -34,8 +30,11 @@ func testRequest(t *testing.T, ts *httptest.Server, req *http.Request) (*http.Re
 }
 
 func TestGetURL(t *testing.T) {
-	store, _ := storage.NewStorageMemory(nil)
-	ts := httptest.NewServer(Router(store))
+	store, err := storage.NewStorageMemory()
+	require.NoError(t, err)
+
+	a := app.NewApp(store)
+	ts := httptest.NewServer(Router(a))
 	defer ts.Close()
 
 	type want struct {
@@ -65,7 +64,7 @@ func TestGetURL(t *testing.T) {
 			name: "test 1",
 			want: want{
 				statusCode:  http.StatusBadRequest,
-				response:    "bad id\n",
+				response:    "bad short url\n",
 				contentType: "text/plain; charset=utf-8",
 			},
 			reqParam: reqParam{http.MethodGet, "/abcdef12", nil, map[string]string{"Accept-Encoding": ""}},
@@ -86,7 +85,8 @@ func TestGetURL(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.store.key != "" {
-				store.Set(context.Background(), test.store.key, test.store.value)
+				userID := ""
+				a.Set(t.Context(), test.store.key, test.store.value, auth.UserID(userID))
 			}
 			req, err := http.NewRequest(test.reqParam.method, ts.URL+test.reqParam.url, test.reqParam.body)
 			require.NoError(t, err)
@@ -126,8 +126,11 @@ func TestGetURL(t *testing.T) {
 }
 
 func TestCreateURL(t *testing.T) {
-	store, _ := storage.NewStorageMemory(nil)
-	ts := httptest.NewServer(Router(store))
+	store, err := storage.NewStorageMemory()
+	require.NoError(t, err)
+
+	a := app.NewApp(store)
+	ts := httptest.NewServer(Router(a))
 	defer ts.Close()
 
 	type want struct {
@@ -185,7 +188,7 @@ func TestCreateURL(t *testing.T) {
 
 			id, ok := strings.CutPrefix(string(respBody), test.want.response)
 			if assert.True(t, ok) {
-				val, ok, err := store.Get(context.Background(), id)
+				val, ok, err := a.Get(t.Context(), id)
 				assert.NoError(t, err)
 				assert.True(t, ok)
 				assert.Equal(t, test.store.value, val)

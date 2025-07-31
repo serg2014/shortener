@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/serg2014/shortener/internal/auth"
 	"go.uber.org/zap"
 )
 
@@ -95,6 +96,10 @@ func WithLogging(h http.Handler) http.Handler {
 		duration := time.Since(start)
 
 		// отправляем сведения о запросе в zap
+		userID, err := auth.GetUserID(r.Context())
+		if err != nil {
+			userID = ""
+		}
 		Log.Info(
 			"got incoming HTTP request",
 			zap.String("uri", r.RequestURI),
@@ -102,6 +107,7 @@ func WithLogging(h http.Handler) http.Handler {
 			zap.Duration("duration", duration),
 			zap.Int("status", responseData.status),
 			zap.Int("size", responseData.size),
+			zap.String("userID", string(userID)),
 		)
 
 	}

@@ -13,6 +13,7 @@ import (
 type item struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
+	UserID      string `json:"user_id,omitempty"`
 }
 
 type storageFile struct {
@@ -29,7 +30,15 @@ func NewStorageFile(filePath string) (Storager, error) {
 
 	scanner := bufio.NewScanner(file)
 	var item item
-	s := storageFile{file: file, storage: storage{short2orig: make(short2orig), orig2short: make(orig2short)}}
+	s := storageFile{
+		file: file,
+		storage: storage{
+			short2orig: make(short2orig),
+			orig2short: make(orig2short),
+			users:      make(users),
+		},
+	}
+
 	// TODO если строка будет длинной получим ошибку
 	for scanner.Scan() {
 		line := scanner.Bytes()
@@ -55,6 +64,11 @@ func NewStorageFile(filePath string) (Storager, error) {
 		}
 		s.short2orig[item.ShortURL] = item.OriginalURL
 		s.orig2short[item.OriginalURL] = item.ShortURL
+
+		if _, ok := s.users[item.UserID]; !ok {
+			s.users[item.UserID] = make(short2orig)
+		}
+		s.users[item.UserID][item.ShortURL] = item.OriginalURL
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
@@ -62,43 +76,43 @@ func NewStorageFile(filePath string) (Storager, error) {
 	return &s, nil
 }
 
-func (s *storageFile) Set(ctx context.Context, key string, value string) error {
+func (s *storageFile) Set(ctx context.Context, key string, value string, userID string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
-	if _, ok := s.orig2short[value]; ok {
-		return ErrConflict
+	err := s.set(ctx, key, value, userID)
+	if err != nil {
+		return err
 	}
 
-	s.short2orig[key] = value
-	s.orig2short[value] = key
-	err := s.saveRow(key, value)
-	if err != nil {
-		logger.Log.Error("while save row in file", zap.Error(err))
-	}
-	return err
+	return s.saveRow(key, value, userID)
 }
 
-func (s *storageFile) SetBatch(ctx context.Context, data short2orig) error {
+func (s *storageFile) SetBatch(ctx context.Context, data short2orig, userID string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
+
+	if _, ok := s.users[userID]; !ok {
+		s.users[userID] = make(short2orig)
+	}
 
 	for key, value := range data {
 		s.short2orig[key] = value
 		// TODO проблема если в data несколько одинаковых значений
 		s.orig2short[value] = key
-		err := s.saveRow(key, value)
+		s.users[userID][key] = value
+		// TODO писать надо чанками
+		err := s.saveRow(key, value, userID)
 		if err != nil {
 			logger.Log.Error("while save row in file", zap.Error(err))
 			return err
 		}
-
 	}
 	return nil
 }
 
 // TODO flush
-func (s *storageFile) saveRow(shortURL, originalURL string) error {
-	itemData := item{ShortURL: shortURL, OriginalURL: originalURL}
+func (s *storageFile) saveRow(shortURL, originalURL string, userID string) error {
+	itemData := item{ShortURL: shortURL, OriginalURL: originalURL, UserID: userID}
 	line, err := json.Marshal(itemData)
 	if err != nil {
 		return err

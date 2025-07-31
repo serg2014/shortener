@@ -4,17 +4,23 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"go.uber.org/zap"
 
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/serg2014/shortener/internal/app"
+	"github.com/serg2014/shortener/internal/auth"
 	"github.com/serg2014/shortener/internal/config"
 	"github.com/serg2014/shortener/internal/handlers"
 	"github.com/serg2014/shortener/internal/logger"
 	"github.com/serg2014/shortener/internal/storage"
 )
+
+// TODO вынести в конфиг
+const poolSize = 10
 
 func main() {
 	if err := run(); err != nil {
@@ -30,9 +36,9 @@ func gzipMiddleware(h http.Handler) http.Handler {
 		ow := w
 
 		// проверяем, что клиент умеет получать от сервера сжатые данные в формате gzip
-		acceptEncoding := r.Header.Get("Accept-Encoding")
-		supportsGzip := strings.Contains(acceptEncoding, "gzip")
-		logger.Log.Sugar().Infof("acceptEncoding: %s, supportsGzip: %s", acceptEncoding, supportsGzip)
+		acceptEncoding := strings.Split(r.Header.Get("Accept-Encoding"), ", ")
+		supportsGzip := slices.Index(acceptEncoding, "gzip") != -1
+		logger.Log.Sugar().Infof("acceptEncoding: %s, supportsGzip: %t", acceptEncoding, supportsGzip)
 		if supportsGzip {
 			// оборачиваем оригинальный http.ResponseWriter новым с поддержкой сжатия
 			cw := newCompressWriter(w)
@@ -43,8 +49,8 @@ func gzipMiddleware(h http.Handler) http.Handler {
 		}
 
 		// проверяем, что клиент отправил серверу сжатые данные в формате gzip
-		contentEncoding := r.Header.Get("Content-Encoding")
-		sendsGzip := strings.Contains(contentEncoding, "gzip")
+		contentEncoding := strings.Split(r.Header.Get("Content-Encoding"), ", ")
+		sendsGzip := slices.Index(contentEncoding, "gzip") != -1
 		if sendsGzip {
 			// оборачиваем тело запроса в io.Reader с поддержкой декомпрессии
 			cr, err := newCompressReader(r.Body)
@@ -62,19 +68,22 @@ func gzipMiddleware(h http.Handler) http.Handler {
 	})
 }
 
-func Router(store storage.Storager) chi.Router {
+func Router(a *app.MyApp) chi.Router {
 	r := chi.NewRouter()
 	//r.Use(middleware.Logger)
 	r.Use(logger.WithLogging)
+	r.Use(auth.AuthMiddleware)
 	r.Use(gzipMiddleware)
 
-	r.Post("/", handlers.CreateURL(store))  // POST /
-	r.Get("/{key}", handlers.GetURL(store)) // GET /Fvdvgfgf
-	r.Post("/api/shorten", handlers.CreateURL2(store))
+	r.Post("/", handlers.CreateURL(a))  // POST /
+	r.Get("/{key}", handlers.GetURL(a)) // GET /Fvdvgfgf
+	r.Post("/api/shorten", handlers.CreateURLJson(a))
 	//r.Post("/", logger.RequestLogger(CreateURL(store)))  // POST /
 	//r.Get("/{key}", logger.RequestLogger(GetURL(store))) // GET /Fvdvgfgf
-	r.Get("/ping", handlers.Ping(store))
-	r.Post("/api/shorten/batch", handlers.CreateURLBatch(store))
+	r.Get("/ping", handlers.Ping(a))
+	r.Post("/api/shorten/batch", handlers.CreateURLBatch(a))
+	r.Get("/api/user/urls", handlers.GetUserURLS(a))
+	r.Delete("/api/user/urls", handlers.DeleteUserURLS(a))
 	return r
 }
 
@@ -95,6 +104,11 @@ func run() error {
 	}
 	defer store.Close()
 
-	logger.Log.Info("Running server", zap.String("address", config.Config.String()))
-	return http.ListenAndServe(fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port), Router(store))
+	app := app.NewApp(store)
+	for i := 0; i < poolSize; i++ {
+		go app.DeleteUserURLsBackground(ctx)
+	}
+
+	logger.Log.Info("Running server", zap.String("address", config.Config.String()), zap.String("storage", fmt.Sprintf("%T", store)))
+	return http.ListenAndServe(fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port), Router(app))
 }

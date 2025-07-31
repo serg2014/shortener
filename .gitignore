@@ -15,6 +15,8 @@
 cmd/client/main
 cmd/shortener/main
 cmd/shortener/shortener
+cmd/shortener/shortenertest*
+cmd/shortener/statictest*
 
 # Dependency directories (remove the comment below to include it)
 vendor/
@@ -22,3 +24,9 @@ vendor/
 # IDEs directories
 .idea
 .vscode
+
+# macos
+.DS_Store
+
+#
+cmd/shortener/storage.txt

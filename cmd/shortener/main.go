@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 
 	"go.uber.org/zap"
 
@@ -29,44 +32,52 @@ func main() {
 	}
 }
 
-// TODO добавить тесты
-func gzipMiddleware(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// по умолчанию устанавливаем оригинальный http.ResponseWriter как тот,
-		// который будем передавать следующей функции
-		ow := w
+func gzipMiddleware(pool *sync.Pool) func(http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// по умолчанию устанавливаем оригинальный http.ResponseWriter как тот,
+			// который будем передавать следующей функции
+			ow := w
 
-		// проверяем, что клиент умеет получать от сервера сжатые данные в формате gzip
-		acceptEncoding := strings.Split(r.Header.Get("Accept-Encoding"), ", ")
-		supportsGzip := slices.Index(acceptEncoding, "gzip") != -1
-		logger.Log.Sugar().Infof("acceptEncoding: %s, supportsGzip: %t", acceptEncoding, supportsGzip)
-		if supportsGzip {
-			// оборачиваем оригинальный http.ResponseWriter новым с поддержкой сжатия
-			cw := newCompressWriter(w)
-			// меняем оригинальный http.ResponseWriter на новый
-			ow = cw
-			// не забываем отправить клиенту все сжатые данные после завершения middleware
-			defer cw.Close()
-		}
+			// проверяем, что клиент умеет получать от сервера сжатые данные в формате gzip
+			acceptEncoding := strings.Split(r.Header.Get("Accept-Encoding"), ", ")
+			supportsGzip := slices.Index(acceptEncoding, "gzip") != -1
+			logger.Log.Sugar().Infof("acceptEncoding: %s, supportsGzip: %t", acceptEncoding, supportsGzip)
+			if supportsGzip {
+				gzw := pool.Get().(*gzip.Writer)
+				gzw.Reset(w)
+				// оборачиваем оригинальный http.ResponseWriter новым с поддержкой сжатия
+				cw := newCompressWriter(gzw, w)
+				// меняем оригинальный http.ResponseWriter на новый
+				ow = cw
 
-		// проверяем, что клиент отправил серверу сжатые данные в формате gzip
-		contentEncoding := strings.Split(r.Header.Get("Content-Encoding"), ", ")
-		sendsGzip := slices.Index(contentEncoding, "gzip") != -1
-		if sendsGzip {
-			// оборачиваем тело запроса в io.Reader с поддержкой декомпрессии
-			cr, err := newCompressReader(r.Body)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
+				defer func() {
+					// не забываем отправить клиенту все сжатые данные после завершения middleware
+					cw.Close()
+					// вернуть в буфер
+					pool.Put(gzw)
+				}()
 			}
-			// меняем тело запроса на новое
-			r.Body = cr
-			defer cr.Close()
-		}
 
-		// передаём управление хендлеру
-		h.ServeHTTP(ow, r)
-	})
+			// проверяем, что клиент отправил серверу сжатые данные в формате gzip
+			contentEncoding := strings.Split(r.Header.Get("Content-Encoding"), ", ")
+			sendsGzip := slices.Index(contentEncoding, "gzip") != -1
+			if sendsGzip {
+				// оборачиваем тело запроса в io.Reader с поддержкой декомпрессии
+				cr, err := newCompressReader(r.Body)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				// меняем тело запроса на новое
+				r.Body = cr
+				defer cr.Close()
+			}
+
+			// передаём управление хендлеру
+			h.ServeHTTP(ow, r)
+		})
+	}
 }
 
 func Router(a *app.MyApp) chi.Router {
@@ -76,10 +87,17 @@ func Router(a *app.MyApp) chi.Router {
 		r.Mount("/", middleware.Profiler())
 	})
 
+	pool := &sync.Pool{
+		New: func() any {
+			var buf bytes.Buffer
+			return gzip.NewWriter(&buf)
+		},
+	}
+
 	r.Route("/", func(r chi.Router) {
 		r.Use(logger.WithLogging)
 		r.Use(auth.AuthMiddleware)
-		r.Use(gzipMiddleware)
+		r.Use(gzipMiddleware(pool))
 
 		r.Post("/", handlers.CreateURL(a))
 		r.Get("/{key}", handlers.GetURL(a))

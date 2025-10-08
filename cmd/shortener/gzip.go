@@ -13,10 +13,10 @@ type compressWriter struct {
 	zw *gzip.Writer
 }
 
-func newCompressWriter(w http.ResponseWriter) *compressWriter {
+func newCompressWriter(gzw *gzip.Writer, w http.ResponseWriter) *compressWriter {
 	return &compressWriter{
 		w:  w,
-		zw: gzip.NewWriter(w),
+		zw: gzw,
 	}
 }
 

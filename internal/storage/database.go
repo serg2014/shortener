@@ -55,7 +55,7 @@ func NewStorageDB(ctx context.Context, dsn string) (Storager, error) {
 		return nil, err
 	}
 	if err = m.Up(); err != nil && err != migrate.ErrNoChange {
-		//logger.Log.Fatal("failed to apply migrations", zap.Error(err))
+		logger.Log.Fatal("failed to apply migrations", zap.Error(err))
 		return nil, err
 	}
 

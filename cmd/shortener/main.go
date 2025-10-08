@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/serg2014/shortener/internal/app"
 	"github.com/serg2014/shortener/internal/auth"
@@ -70,20 +71,24 @@ func gzipMiddleware(h http.Handler) http.Handler {
 
 func Router(a *app.MyApp) chi.Router {
 	r := chi.NewRouter()
-	//r.Use(middleware.Logger)
-	r.Use(logger.WithLogging)
-	r.Use(auth.AuthMiddleware)
-	r.Use(gzipMiddleware)
+	r.Route("/debug", func(r chi.Router) {
+		// add pprof
+		r.Mount("/", middleware.Profiler())
+	})
 
-	r.Post("/", handlers.CreateURL(a))  // POST /
-	r.Get("/{key}", handlers.GetURL(a)) // GET /Fvdvgfgf
-	r.Post("/api/shorten", handlers.CreateURLJson(a))
-	//r.Post("/", logger.RequestLogger(CreateURL(store)))  // POST /
-	//r.Get("/{key}", logger.RequestLogger(GetURL(store))) // GET /Fvdvgfgf
-	r.Get("/ping", handlers.Ping(a))
-	r.Post("/api/shorten/batch", handlers.CreateURLBatch(a))
-	r.Get("/api/user/urls", handlers.GetUserURLS(a))
-	r.Delete("/api/user/urls", handlers.DeleteUserURLS(a))
+	r.Route("/", func(r chi.Router) {
+		r.Use(logger.WithLogging)
+		r.Use(auth.AuthMiddleware)
+		r.Use(gzipMiddleware)
+
+		r.Post("/", handlers.CreateURL(a))
+		r.Get("/{key}", handlers.GetURL(a))
+		r.Post("/api/shorten", handlers.CreateURLJson(a))
+		r.Get("/ping", handlers.Ping(a))
+		r.Post("/api/shorten/batch", handlers.CreateURLBatch(a))
+		r.Get("/api/user/urls", handlers.GetUserURLS(a))
+		r.Delete("/api/user/urls", handlers.DeleteUserURLS(a))
+	})
 	return r
 }
 

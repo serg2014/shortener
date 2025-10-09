@@ -6,8 +6,9 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/serg2014/shortener/internal/logger"
 	"go.uber.org/zap"
+
+	"github.com/serg2014/shortener/internal/logger"
 )
 
 type item struct {

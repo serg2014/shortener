@@ -19,6 +19,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/jackc/pgx/v5/stdlib"
+
 	"github.com/serg2014/shortener/internal/app"
 	"github.com/serg2014/shortener/internal/auth"
 	"github.com/serg2014/shortener/internal/config"

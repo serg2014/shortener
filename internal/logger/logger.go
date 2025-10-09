@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/serg2014/shortener/internal/auth"
 	"go.uber.org/zap"
+
+	"github.com/serg2014/shortener/internal/auth"
 )
 
 // Log будет доступен всему коду как синглтон.

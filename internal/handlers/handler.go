@@ -9,12 +9,13 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
+
 	"github.com/serg2014/shortener/internal/app"
 	"github.com/serg2014/shortener/internal/auth"
 	"github.com/serg2014/shortener/internal/logger"
 	"github.com/serg2014/shortener/internal/models"
 	"github.com/serg2014/shortener/internal/storage"
-	"go.uber.org/zap"
 )
 
 // var store = storage.NewStorage(nil)

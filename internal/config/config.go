@@ -19,13 +19,17 @@ type config struct {
 	DatabaseDSN     string `env:"DATABASE_DSN"`
 }
 
-var Config = &config{
-	Host:            "localhost",
-	Port:            8080,
-	BaseURL:         "",
-	LogLevel:        "",
-	FileStoragePath: "",
+func newConfig() *config {
+	return &config{
+		Host:            "localhost",
+		Port:            8080,
+		BaseURL:         "",
+		LogLevel:        "",
+		FileStoragePath: "",
+	}
 }
+
+var Config = newConfig()
 
 func (c *config) String() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)

@@ -21,6 +21,8 @@ type UserID string
 
 var ErrCookieUserID = fmt.Errorf("no valid cookie %s", CookieName)
 var ErrUserIDFromContext = fmt.Errorf("no userid in context")
+var ErrBadToken = errors.New("bad token")
+var ErrBadSignature = errors.New("bad signature")
 
 var secret = []byte("somesecret")
 
@@ -45,10 +47,10 @@ func createToken(value UserID) string {
 func checkToken(token string) (UserID, error) {
 	items := strings.Split(token, TokenSep)
 	if len(items) != 2 {
-		return "", errors.New("bad token")
+		return "", ErrBadToken
 	}
 	if sign([]byte(items[0]), secret) != items[1] {
-		return "", errors.New("bad signature")
+		return "", ErrBadSignature
 	}
 	return UserID(items[0]), nil
 }

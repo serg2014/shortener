@@ -93,21 +93,21 @@ func TestGetUserIDFromCookie(t *testing.T) {
 		err    error
 	}
 	tests := []struct {
-		name       string
-		cookie_val string
-		expect     want
+		name      string
+		cookieVal string
+		expect    want
 	}{
 		{
-			name:       "good cookie",
-			cookie_val: "user_id=some_user_id.kJusbumVnkwQSAX+zsXQscI83JIE1VVQcfrDpbXB7FQ",
+			name:      "good cookie",
+			cookieVal: "user_id=some_user_id.kJusbumVnkwQSAX+zsXQscI83JIE1VVQcfrDpbXB7FQ",
 			expect: want{
 				userID: UserID("some_user_id"),
 				err:    nil,
 			},
 		},
 		{
-			name:       "no cookie",
-			cookie_val: "another_cookie=1",
+			name:      "no cookie",
+			cookieVal: "another_cookie=1",
 			expect: want{
 				userID: UserID(""),
 				err:    ErrCookieUserID,
@@ -121,7 +121,7 @@ func TestGetUserIDFromCookie(t *testing.T) {
 				"http://localhost/",
 				nil,
 			)
-			req.Header.Add("cookie", test.cookie_val)
+			req.Header.Add("cookie", test.cookieVal)
 
 			userID, err := GetUserIDFromCookie(req)
 			if test.expect.err == nil {
@@ -139,12 +139,12 @@ func TestGetUserIDFromCookie(t *testing.T) {
 func TestAuthMiddleware(t *testing.T) {
 	tests := []struct {
 		name        string
-		cookie_val  string
+		cookieVal   string
 		nextHandler http.Handler
 	}{
 		{
-			name:       "good userid from cookie",
-			cookie_val: "user_id=some_user_id.kJusbumVnkwQSAX+zsXQscI83JIE1VVQcfrDpbXB7FQ",
+			name:      "good userid from cookie",
+			cookieVal: "user_id=some_user_id.kJusbumVnkwQSAX+zsXQscI83JIE1VVQcfrDpbXB7FQ",
 			// create a handler to use as "next" which will verify the request
 			nextHandler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				val := r.Context().Value(userCtxKey)
@@ -155,8 +155,8 @@ func TestAuthMiddleware(t *testing.T) {
 			}),
 		},
 		{
-			name:       "bad cookie. generate new userid",
-			cookie_val: "user_id=some_user_id",
+			name:      "bad cookie. generate new userid",
+			cookieVal: "user_id=some_user_id",
 			// create a handler to use as "next" which will verify the request
 			nextHandler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				val := r.Context().Value(userCtxKey)
@@ -167,8 +167,8 @@ func TestAuthMiddleware(t *testing.T) {
 			}),
 		},
 		{
-			name:       "no cookie. generate new userid",
-			cookie_val: "some_val=some_user_id",
+			name:      "no cookie. generate new userid",
+			cookieVal: "some_val=some_user_id",
 			// create a handler to use as "next" which will verify the request
 			nextHandler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				val := r.Context().Value(userCtxKey)
@@ -187,7 +187,7 @@ func TestAuthMiddleware(t *testing.T) {
 
 			// create a mock request to use
 			req := httptest.NewRequest("GET", "http://localhost/", nil)
-			req.Header.Add("cookie", test.cookie_val)
+			req.Header.Add("cookie", test.cookieVal)
 
 			// call the handler using a mock response recorder (we'll not use that anyway)
 			handlerToTest.ServeHTTP(httptest.NewRecorder(), req)

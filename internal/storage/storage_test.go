@@ -88,7 +88,7 @@ func TestGetUserURLS(t *testing.T) {
 		name    string
 		userID  string
 		prepare [][3]string
-		expect  []item
+		expect  []Item
 	}{
 		{
 			name:   "url exists for user1",
@@ -97,7 +97,7 @@ func TestGetUserURLS(t *testing.T) {
 				{"short", "long_url", "user1"},
 				{"short2", "long_url2", "user1"},
 			},
-			expect: []item{
+			expect: []Item{
 				{
 					ShortURL:    "short",
 					OriginalURL: "long_url",
@@ -115,7 +115,7 @@ func TestGetUserURLS(t *testing.T) {
 				{"short", "long_url", "user1"},
 				{"short2", "long_url2", "user1"},
 			},
-			expect: []item{},
+			expect: []Item{},
 		},
 	}
 	for _, test := range tests {

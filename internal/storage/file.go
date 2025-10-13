@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"io"
 	"os"
 
 	"go.uber.org/zap"
@@ -19,16 +20,10 @@ type item struct {
 
 type storageFile struct {
 	storage
-	file *os.File
+	file io.ReadWriter
 }
 
-func NewStorageFile(filePath string) (Storager, error) {
-	// os.O_APPEND os.O_SYNC
-	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		return nil, err
-	}
-
+func newStorageIO(file io.ReadWriter) (Storager, error) {
 	scanner := bufio.NewScanner(file)
 	var item item
 	s := storageFile{
@@ -76,6 +71,14 @@ func NewStorageFile(filePath string) (Storager, error) {
 	}
 	return &s, nil
 }
+func NewStorageFile(filePath string) (Storager, error) {
+	// os.O_APPEND os.O_SYNC
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		return nil, err
+	}
+	return newStorageIO(file)
+}
 
 func (s *storageFile) Set(ctx context.Context, key string, value string, userID string) error {
 	s.m.Lock()
@@ -122,7 +125,7 @@ func (s *storageFile) saveRow(shortURL, originalURL string, userID string) error
 	if err != nil {
 		return err
 	}
-	_, err = s.file.WriteString("\n")
+	_, err = s.file.Write([]byte("\n"))
 	if err != nil {
 		return err
 	}

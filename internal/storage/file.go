@@ -12,7 +12,7 @@ import (
 	"github.com/serg2014/shortener/internal/logger"
 )
 
-type item struct {
+type Item struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 	UserID      string `json:"user_id,omitempty"`
@@ -25,11 +25,11 @@ type storageFile struct {
 
 func newStorageIO(file io.ReadWriter) (Storager, error) {
 	scanner := bufio.NewScanner(file)
-	var item item
+	var item Item
 	s := storageFile{
 		file: file,
 		storage: storage{
-			short2orig: make(short2orig),
+			short2orig: make(Short2orig),
 			orig2short: make(orig2short),
 			users:      make(users),
 		},
@@ -62,7 +62,7 @@ func newStorageIO(file io.ReadWriter) (Storager, error) {
 		s.orig2short[item.OriginalURL] = item.ShortURL
 
 		if _, ok := s.users[item.UserID]; !ok {
-			s.users[item.UserID] = make(short2orig)
+			s.users[item.UserID] = make(Short2orig)
 		}
 		s.users[item.UserID][item.ShortURL] = item.OriginalURL
 	}
@@ -91,12 +91,12 @@ func (s *storageFile) Set(ctx context.Context, key string, value string, userID 
 	return s.saveRow(key, value, userID)
 }
 
-func (s *storageFile) SetBatch(ctx context.Context, data short2orig, userID string) error {
+func (s *storageFile) SetBatch(ctx context.Context, data Short2orig, userID string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
 	if _, ok := s.users[userID]; !ok {
-		s.users[userID] = make(short2orig)
+		s.users[userID] = make(Short2orig)
 	}
 
 	for key, value := range data {
@@ -116,7 +116,7 @@ func (s *storageFile) SetBatch(ctx context.Context, data short2orig, userID stri
 
 // TODO flush
 func (s *storageFile) saveRow(shortURL, originalURL string, userID string) error {
-	itemData := item{ShortURL: shortURL, OriginalURL: originalURL, UserID: userID}
+	itemData := Item{ShortURL: shortURL, OriginalURL: originalURL, UserID: userID}
 	line, err := json.Marshal(itemData)
 	if err != nil {
 		return err

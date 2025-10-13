@@ -82,7 +82,7 @@ func (storage *storageDB) Get(ctx context.Context, key string) (string, bool, er
 	return "", false, fmt.Errorf("failed get shorturl: %w", err)
 }
 
-func (storage *storageDB) GetUserURLS(ctx context.Context, userID string) ([]item, error) {
+func (storage *storageDB) GetUserURLS(ctx context.Context, userID string) ([]Item, error) {
 	query := "SELECT short_url, orig_url FROM short2orig WHERE user_id = $1"
 	rows, err := storage.db.QueryContext(ctx, query, userID)
 	if err != nil {
@@ -92,10 +92,10 @@ func (storage *storageDB) GetUserURLS(ctx context.Context, userID string) ([]ite
 	// обязательно закрываем перед возвратом функции
 	defer rows.Close()
 
-	result := make([]item, 0, 1)
+	result := make([]Item, 0, 1)
 	// пробегаем по всем записям
 	for rows.Next() {
-		var item item
+		var item Item
 		err = rows.Scan(&item.ShortURL, &item.OriginalURL)
 		if err != nil {
 			return nil, fmt.Errorf("failed GetUserURLS: %w", err)
@@ -141,7 +141,7 @@ func (storage *storageDB) Set(ctx context.Context, key string, value string, use
 	return nil
 }
 
-func (storage *storageDB) SetBatch(ctx context.Context, data short2orig, userID string) error {
+func (storage *storageDB) SetBatch(ctx context.Context, data Short2orig, userID string) error {
 	// начать транзакцию
 	tx, err := storage.db.Begin()
 	if err != nil {

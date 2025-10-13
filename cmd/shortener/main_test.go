@@ -650,3 +650,258 @@ func TestCreateURLJson_database(t *testing.T) {
 		})
 	}
 }
+
+type expect struct {
+	code     int
+	response string
+	headers  map[string]string
+}
+type reqParam struct {
+	method    string
+	url       string
+	body      io.Reader
+	headers   map[string]string
+	storeMock []*gomock.Call
+	genMock   []*gomock.Call
+}
+type testsReqItem struct {
+	name    string
+	request reqParam
+	expect  expect
+}
+
+func makeTestRequest(t *testing.T, ts *httptest.Server, client *http.Client, test testsReqItem) {
+	if len(test.request.storeMock) != 0 {
+		gomock.InOrder(test.request.storeMock...)
+	}
+	if len(test.request.genMock) != 0 {
+		gomock.InOrder(test.request.genMock...)
+	}
+	req, err := http.NewRequest(
+		test.request.method,
+		ts.URL+test.request.url,
+		test.request.body,
+	)
+	require.NoError(t, err)
+	if len(test.request.headers) != 0 {
+		for k := range test.request.headers {
+			req.Header.Add(k, test.request.headers[k])
+		}
+	}
+
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	respReader := resp.Body
+	if resp.Header.Get("Content-Encoding") == "gzip" {
+		gzipReader, err := gzip.NewReader(resp.Body)
+		require.NoError(t, err, "Error creating gzip reader")
+		defer gzipReader.Close()
+		respReader = gzipReader
+	}
+	respBody, err := io.ReadAll(respReader)
+	require.NoError(t, err)
+
+	assert.Equal(t, test.expect.code, resp.StatusCode)
+	for k := range test.expect.headers {
+		assert.Equal(t, test.expect.headers[k], resp.Header.Get(k), k)
+	}
+
+	respData := string(respBody)
+	if resp.Header.Get("Content-Type") == "application/json" {
+		assert.JSONEq(t, test.expect.response, respData)
+		return
+	}
+	assert.Equal(t, test.expect.response, respData)
+}
+
+func TestPing_database(t *testing.T) {
+	// создадим конроллер моков и экземпляр мок-хранилища
+	ctrl := gomock.NewController(t)
+	store := mock.NewMockStorager(ctrl)
+	a := app.NewApp(store, nil)
+	ts := httptest.NewServer(Router(a))
+	defer ts.Close()
+
+	// отключить принудительное выставление content-encoding: gzip
+	client := &http.Client{Transport: &http.Transport{DisableCompression: true}}
+	// не ходить по редиректам
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+
+	const cookieVal = "user_id=some_user_id.kJusbumVnkwQSAX+zsXQscI83JIE1VVQcfrDpbXB7FQ"
+	tests := []testsReqItem{
+		{
+			name: "ok",
+			request: reqParam{
+				method: http.MethodGet,
+				url:    "/ping",
+				headers: map[string]string{
+					"cookie": cookieVal,
+				},
+				body: nil,
+				storeMock: []*gomock.Call{
+					store.EXPECT().Ping(gomock.Any()).Return(nil),
+				},
+				genMock: []*gomock.Call{},
+			},
+			expect: expect{
+				code:     http.StatusOK,
+				response: "",
+				headers: map[string]string{
+					"Content-Type":     "",
+					"Content-Encoding": "",
+				},
+			},
+		},
+		{
+			name: "ok without cookie",
+			request: reqParam{
+				method:  http.MethodGet,
+				url:     "/ping",
+				headers: map[string]string{},
+				body:    nil,
+				storeMock: []*gomock.Call{
+					store.EXPECT().Ping(gomock.Any()).Return(nil),
+				},
+				genMock: []*gomock.Call{},
+			},
+			expect: expect{
+				code:     http.StatusOK,
+				response: "",
+				headers: map[string]string{
+					"Content-Type":     "",
+					"Content-Encoding": "",
+				},
+			},
+		},
+		{
+			name: "ok with gzip",
+			request: reqParam{
+				method: http.MethodGet,
+				url:    "/ping",
+				headers: map[string]string{
+					"cookie":          cookieVal,
+					"accept-encoding": "gzip",
+				},
+				body: nil,
+				storeMock: []*gomock.Call{
+					store.EXPECT().Ping(gomock.Any()).Return(nil),
+				},
+				genMock: []*gomock.Call{},
+			},
+			expect: expect{
+				code:     http.StatusOK,
+				response: "",
+				headers: map[string]string{
+					"Content-Type":     "",
+					"Content-Encoding": "gzip",
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			makeTestRequest(t, ts, client, test)
+		})
+	}
+}
+
+func TestCreateURLBatch_database(t *testing.T) {
+	// создадим конроллер моков и экземпляр мок-хранилища
+	ctrl := gomock.NewController(t)
+	store := mock.NewMockStorager(ctrl)
+	gen := appmock.NewMockGenarator(ctrl)
+	a := app.NewApp(store, gen)
+	ts := httptest.NewServer(Router(a))
+	defer ts.Close()
+
+	// отключить принудительное выставление content-encoding: gzip
+	client := &http.Client{Transport: &http.Transport{DisableCompression: true}}
+	// не ходить по редиректам
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+
+	const cookieVal = "user_id=some_user_id.kJusbumVnkwQSAX+zsXQscI83JIE1VVQcfrDpbXB7FQ"
+	tests := []testsReqItem{
+		{
+			name: "ok",
+			request: reqParam{
+				method: http.MethodPost,
+				url:    "/api/shorten/batch",
+				headers: map[string]string{
+					"cookie":       cookieVal,
+					"Content-Type": "application/json",
+				},
+				body: strings.NewReader(`[
+				{"correlation_id":"one","original_url":"http://original.url/123"},
+				{"correlation_id":"two","original_url":"http://original.url/124"}
+				]`),
+				storeMock: []*gomock.Call{
+					store.EXPECT().
+						SetBatch(gomock.Any(), gomock.Any(), "some_user_id").
+						Return(nil),
+				},
+				genMock: []*gomock.Call{
+					gen.EXPECT().GenerateShortKey().Return("a1234567"),
+					gen.EXPECT().GenerateShortKey().Return("a1234568"),
+				},
+			},
+			expect: expect{
+				code: http.StatusCreated,
+				response: `[
+				{"correlation_id":"one", "short_url":"http://localhost:8080/a1234567"},
+				{"correlation_id":"two", "short_url":"http://localhost:8080/a1234568"}
+				]`,
+				headers: map[string]string{
+					"Content-Type":     "application/json",
+					"Content-Encoding": "",
+				},
+			},
+		},
+		{
+			name: "ok with gzip",
+			request: reqParam{
+				method: http.MethodPost,
+				url:    "/api/shorten/batch",
+				headers: map[string]string{
+					"cookie":          cookieVal,
+					"Content-Type":    "application/json",
+					"accept-encoding": "gzip",
+				},
+				body: strings.NewReader(`[
+				{"correlation_id":"one","original_url":"http://original.url/123"},
+				{"correlation_id":"two","original_url":"http://original.url/124"}
+				]`),
+				storeMock: []*gomock.Call{
+					store.EXPECT().
+						SetBatch(gomock.Any(), gomock.Any(), "some_user_id").
+						Return(nil),
+				},
+				genMock: []*gomock.Call{
+					gen.EXPECT().GenerateShortKey().Return("a1234567"),
+					gen.EXPECT().GenerateShortKey().Return("a1234568"),
+				},
+			},
+			expect: expect{
+				code: http.StatusCreated,
+				response: `[
+				{"correlation_id":"one", "short_url":"http://localhost:8080/a1234567"},
+				{"correlation_id":"two", "short_url":"http://localhost:8080/a1234568"}
+				]`,
+				headers: map[string]string{
+					"Content-Type":     "application/json",
+					"Content-Encoding": "gzip",
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			makeTestRequest(t, ts, client, test)
+		})
+	}
+}

@@ -140,8 +140,9 @@ func Ping(a *app.MyApp) http.HandlerFunc {
 			logger.Log.Error("ping", zap.Error(err))
 			code := http.StatusInternalServerError
 			http.Error(w, http.StatusText(code), code)
+			return
 		}
-
+		w.WriteHeader(http.StatusOK)
 	}
 }
 

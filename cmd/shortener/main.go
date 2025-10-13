@@ -29,6 +29,7 @@ import (
 )
 
 // TODO вынести в конфиг
+// poolSize кол-во горутин обрабатывающих удаление урлов.
 const poolSize = 10
 
 func main() {
@@ -37,6 +38,7 @@ func main() {
 	}
 }
 
+// gzipMiddleware middleware для сжатия/разжатия gzip
 func gzipMiddleware(pool *sync.Pool) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -132,7 +134,7 @@ func run() error {
 	}
 	defer store.Close()
 
-	app := app.NewApp(store)
+	app := app.NewApp(store, nil)
 
 	srv := http.Server{
 		Addr:    fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port),

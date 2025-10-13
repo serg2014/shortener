@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
 
 	"go.uber.org/zap"
 
@@ -19,28 +18,23 @@ type MyApp struct {
 	store storage.Storager
 	// канал для отложенной отправки новых сообщений
 	msgChan chan storage.Message
+	gen     Genarator
 }
 
-func NewApp(store storage.Storager) *MyApp {
+func NewApp(store storage.Storager, gen Genarator) *MyApp {
+	if gen == nil {
+		gen = &Generate{}
+	}
 	app := &MyApp{
 		store:   store,
 		msgChan: make(chan storage.Message, 1024),
+		gen:     gen,
 	}
 	return app
 }
 
-func generateShortKey() string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
-	shortKey := make([]byte, storage.KeyLength)
-	for i := range shortKey {
-		shortKey[i] = charset[rand.Intn(len(charset))]
-	}
-	return string(shortKey)
-}
-
 func (a *MyApp) GenerateShortURL(ctx context.Context, origURL string, userID auth.UserID) (string, error) {
-	shortURL := generateShortKey()
+	shortURL := a.gen.GenerateShortKey()
 	err := a.store.Set(ctx, shortURL, origURL, string(userID))
 	if err != nil {
 		if !errors.Is(err, storage.ErrConflict) {
@@ -68,7 +62,7 @@ func (a *MyApp) GenerateShortURLBatch(ctx context.Context, req models.RequestBat
 	short2orig := make(map[string]string, len(req))
 	for i := range req {
 		resp[i].CorrelationID = req[i].CorrelationID
-		id := generateShortKey()
+		id := a.gen.GenerateShortKey()
 		resp[i].ShortURL = URLTemplate(id)
 		short2orig[id] = req[i].OriginalURL
 	}

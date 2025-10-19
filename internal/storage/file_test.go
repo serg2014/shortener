@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -88,19 +89,63 @@ func Test_File_Set(t *testing.T) {
 				err = storage.Set(t.Context(), insert[0], insert[1], insert[2])
 				assert.Equal(t, test.expect, err)
 			}
-			allRows := make([]byte, 0)
-			p := make([]byte, 10)
-			for i := true; i == true; {
-				n, err := test.fileData.Read(p)
-				if err != nil {
-					if err != io.EOF {
-						require.NoError(t, err)
-					}
-					i = false
-				}
-				allRows = append(allRows, p[:n]...)
+			allRows, err := readAllData_in_test(test.fileData)
+			require.NoError(t, err)
+			assert.Equal(t, test.writen, allRows)
+		})
+	}
+}
+
+func readAllData_in_test(file io.ReadWriter) (string, error) {
+	allRows := make([]byte, 0)
+	p := make([]byte, 10)
+	for i := true; i == true; {
+		n, err := file.Read(p)
+		if err != nil {
+			if err != io.EOF {
+				return "", err
 			}
-			assert.Equal(t, test.writen, string(allRows))
+			i = false
+		}
+		allRows = append(allRows, p[:n]...)
+	}
+	return string(allRows), nil
+}
+
+func Test_File_SetBatch(t *testing.T) {
+	tests := []struct {
+		name     string
+		UserID   string
+		fileData io.ReadWriter
+		data     Short2orig
+		expect   string
+	}{
+		{
+			name:     "First",
+			UserID:   "user1",
+			fileData: bytes.NewBuffer(nil),
+			data: Short2orig{
+				"a1234567": "http://one.ru",
+				"a1234568": "http://two.ru",
+				"a1234569": "http://three.ru",
+			},
+			expect: `{"short_url":"a1234567","original_url":"http://one.ru","user_id":"user1"}
+{"short_url":"a1234568","original_url":"http://two.ru","user_id":"user1"}
+{"short_url":"a1234569","original_url":"http://three.ru","user_id":"user1"}
+`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fileStorage, err := newStorageIO(test.fileData)
+			require.NoError(t, err)
+
+			err = fileStorage.SetBatch(t.Context(), test.data, test.UserID)
+			require.NoError(t, err)
+
+			data, err := readAllData_in_test(test.fileData)
+			require.NoError(t, err)
+			assert.ElementsMatch(t, strings.Split(test.expect, "\n"), strings.Split(data, "\n"))
 		})
 	}
 }

@@ -72,7 +72,7 @@ func (s *storage) GetShort(ctx context.Context, origURL string) (string, bool, e
 	return v, ok, nil
 }
 
-func (s *storage) set(ctx context.Context, key string, value string, userID string) error {
+func (s *storage) set(key string, value string, userID string) error {
 	if _, ok := s.orig2short[value]; ok {
 		return ErrConflict
 	}
@@ -89,7 +89,7 @@ func (s *storage) set(ctx context.Context, key string, value string, userID stri
 func (s *storage) Set(ctx context.Context, key string, value string, userID string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
-	return s.set(ctx, key, value, userID)
+	return s.set(key, value, userID)
 }
 
 func (s *storage) SetBatch(ctx context.Context, data Short2orig, userID string) error {
@@ -122,6 +122,7 @@ func (s *storage) DeleteUserURLS(ctx context.Context, req models.RequestForDelet
 	return nil
 }
 
+// Storager
 type Storager interface {
 	Get(ctx context.Context, key string) (string, bool, error)
 	GetUserURLS(ctx context.Context, userID string) ([]Item, error)

@@ -83,7 +83,7 @@ func NewStorageFile(filePath string) (Storager, error) {
 func (s *storageFile) Set(ctx context.Context, key string, value string, userID string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
-	err := s.set(ctx, key, value, userID)
+	err := s.set(key, value, userID)
 	if err != nil {
 		return err
 	}
@@ -136,20 +136,3 @@ func (s *storageFile) Close() error {
 	// TODO flush
 	return nil
 }
-
-/*
-func (s *storageFile) SaveAllData() error {
-	s.m.Lock()
-	defer s.m.Unlock()
-	s.file.Seek(0, io.SeekStart)
-
-	for k := range s.short2orig {
-		// TODO в случае ошибки не запишем хвост
-		err := s.saveRow(k, s.short2orig[k])
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-*/

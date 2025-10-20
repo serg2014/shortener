@@ -22,10 +22,12 @@ func newCompressWriter(gzw *gzip.Writer, w http.ResponseWriter) *compressWriter 
 	}
 }
 
+// Header implement Header from http.ResponseWriter
 func (c *compressWriter) Header() http.Header {
 	return c.w.Header()
 }
 
+// Write implement Write from http.ResponseWriter
 func (c *compressWriter) Write(p []byte) (int, error) {
 	if c.compression {
 		return c.zw.Write(p)
@@ -33,6 +35,7 @@ func (c *compressWriter) Write(p []byte) (int, error) {
 	return c.w.Write(p)
 }
 
+// WriteHeader implement WriteHeader from http.ResponseWriter
 func (c *compressWriter) WriteHeader(statusCode int) {
 	if statusCode < 300 {
 		c.w.Header().Set("Content-Encoding", "gzip")
@@ -69,10 +72,12 @@ func newCompressReader(r io.ReadCloser) (*compressReader, error) {
 	}, nil
 }
 
+// Read implemet Read from io.ReadCloser
 func (c compressReader) Read(p []byte) (n int, err error) {
 	return c.zr.Read(p)
 }
 
+// Close implemet Close from io.ReadCloser
 func (c *compressReader) Close() error {
 	if err := c.r.Close(); err != nil {
 		return err

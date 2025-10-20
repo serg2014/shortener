@@ -12,6 +12,7 @@ import (
 	"github.com/serg2014/shortener/internal/logger"
 )
 
+// Item one row file representation
 type Item struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
@@ -71,6 +72,8 @@ func newStorageIO(file io.ReadWriter) (Storager, error) {
 	}
 	return &s, nil
 }
+
+// NewStorageFile create file storage type *storageFile
 func NewStorageFile(filePath string) (Storager, error) {
 	// os.O_APPEND os.O_SYNC
 	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
@@ -80,6 +83,7 @@ func NewStorageFile(filePath string) (Storager, error) {
 	return newStorageIO(file)
 }
 
+// Set save record in file
 func (s *storageFile) Set(ctx context.Context, key string, value string, userID string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
@@ -134,6 +138,7 @@ func (s *storageFile) saveRow(shortURL, originalURL string, userID string) error
 	return nil
 }
 
+// Close close connect to file/db
 func (s *storageFile) Close() error {
 	// TODO flush
 	return nil

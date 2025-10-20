@@ -1,4 +1,4 @@
-// add to logger http status of response and response size.
+// add to logger http status of response and response size, request method, request uri...
 package logger
 
 import (
@@ -49,6 +49,7 @@ type (
 	}
 )
 
+// Write implement Write of http.ResponseWriter
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 	// записываем ответ, используя оригинальный http.ResponseWriter
 	size, err := r.ResponseWriter.Write(b)
@@ -56,20 +57,11 @@ func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 	return size, err
 }
 
+// WriteHeader implement WriteHeader of http.ResponseWriter
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	// записываем код статуса, используя оригинальный http.ResponseWriter
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode // захватываем код статуса
-}
-
-func RequestLogger(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		Log.Info("got incoming HTTP request",
-			zap.String("method", r.Method),
-			zap.String("path", r.URL.Path),
-		)
-		h(w, r)
-	}
 }
 
 // WithLogging добавляет дополнительный код для регистрации сведений о запросе

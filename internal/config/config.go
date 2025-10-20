@@ -41,9 +41,12 @@ func newConfig() *config {
 // global var. use it as singleton
 var Config = newConfig()
 
+// String flag.Value interface
 func (c *config) String() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }
+
+// Set flag.Value interface
 func (c *config) Set(flagValue string) error {
 	host, portStr, err := net.SplitHostPort(flagValue)
 	if err != nil {

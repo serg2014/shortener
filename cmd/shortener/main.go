@@ -87,6 +87,7 @@ func gzipMiddleware(pool *sync.Pool) func(http.Handler) http.Handler {
 	}
 }
 
+// Router set up routes and return chi.Router
 func Router(a *app.MyApp) chi.Router {
 	r := chi.NewRouter()
 	r.Route("/debug", func(r chi.Router) {

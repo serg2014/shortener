@@ -17,7 +17,6 @@ cmd/shortener/main
 cmd/shortener/shortener
 cmd/shortener/shortenertest*
 cmd/shortener/statictest*
-shortener
 
 # Dependency directories (remove the comment below to include it)
 vendor/

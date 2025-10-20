@@ -8,6 +8,7 @@ import (
 	"github.com/serg2014/shortener/internal/models"
 )
 
+// Short2orig stuct for memory storage
 type Short2orig map[string]string
 type orig2short map[string]string
 type users map[string]Short2orig
@@ -19,11 +20,13 @@ type storage struct {
 	m          sync.RWMutex
 }
 
+// Message
 type Message struct {
 	UserID   string
 	ShortURL []string
 }
 
+// NewStorage create storage one of type *storage, *storageFile, *storageDB
 func NewStorage(ctx context.Context, filePath string, dsn string) (Storager, error) {
 	if dsn != "" {
 		return NewStorageDB(ctx, dsn)
@@ -34,6 +37,7 @@ func NewStorage(ctx context.Context, filePath string, dsn string) (Storager, err
 	return NewStorageMemory()
 }
 
+// NewStorageMemory create memory storage type *storage
 func NewStorageMemory() (Storager, error) {
 	return &storage{
 			short2orig: make(Short2orig),
@@ -43,6 +47,7 @@ func NewStorageMemory() (Storager, error) {
 		nil
 }
 
+// Get return orig url by short
 func (s *storage) Get(ctx context.Context, key string) (string, bool, error) {
 	s.m.RLock()
 	defer s.m.RUnlock()
@@ -50,6 +55,7 @@ func (s *storage) Get(ctx context.Context, key string) (string, bool, error) {
 	return v, ok, nil
 }
 
+// GetUserURLS find all user data in storage
 func (s *storage) GetUserURLS(ctx context.Context, userID string) ([]Item, error) {
 	s.m.RLock()
 	defer s.m.RUnlock()
@@ -65,6 +71,7 @@ func (s *storage) GetUserURLS(ctx context.Context, userID string) ([]Item, error
 	return result, nil
 }
 
+// GetShort return short url by orig from storage
 func (s *storage) GetShort(ctx context.Context, origURL string) (string, bool, error) {
 	s.m.RLock()
 	defer s.m.RUnlock()
@@ -86,12 +93,14 @@ func (s *storage) set(key string, value string, userID string) error {
 	return nil
 }
 
+// Set save record in storage
 func (s *storage) Set(ctx context.Context, key string, value string, userID string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 	return s.set(key, value, userID)
 }
 
+// SetBatch save records in storage
 func (s *storage) SetBatch(ctx context.Context, data Short2orig, userID string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
@@ -109,14 +118,17 @@ func (s *storage) SetBatch(ctx context.Context, data Short2orig, userID string) 
 	return nil
 }
 
+// Close close connect to file/db
 func (s *storage) Close() error {
 	return nil
 }
 
+// Ping check connect ot db
 func (s *storage) Ping(ctx context.Context) error {
 	return nil
 }
 
+// DeleteUserURLS delete urls for user
 func (s *storage) DeleteUserURLS(ctx context.Context, req models.RequestForDeleteURLS, userID string) error {
 	// TODO
 	return nil

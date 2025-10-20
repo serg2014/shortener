@@ -20,13 +20,17 @@ import (
 // must correspond to column short_url in he table short2orig
 const KeyLength = 8
 
+// ErrConflict use this error when save already exist url
 var ErrConflict = errors.New("data conflict")
+
+// ErrDeleted use this error for request deleted url
 var ErrDeleted = errors.New("data deleted")
 
 type storageDB struct {
 	db *sql.DB
 }
 
+// NewStorageDB create db storage type *storageDB
 func NewStorageDB(ctx context.Context, dsn string) (Storager, error) {
 	// dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
 	//  `localhost`, `video`, `XXXXXXXX`, `video`)
@@ -64,6 +68,7 @@ func NewStorageDB(ctx context.Context, dsn string) (Storager, error) {
 	return &storageDB{db: db}, nil
 }
 
+// Get return orig url by short
 func (storage *storageDB) Get(ctx context.Context, key string) (string, bool, error) {
 	query := "SELECT orig_url, is_deleted FROM short2orig WHERE short_url = $1"
 	row := storage.db.QueryRowContext(ctx, query, key)
@@ -83,6 +88,7 @@ func (storage *storageDB) Get(ctx context.Context, key string) (string, bool, er
 	return "", false, fmt.Errorf("failed get shorturl: %w", err)
 }
 
+// GetUserURLS find all user data in storage
 func (storage *storageDB) GetUserURLS(ctx context.Context, userID string) ([]Item, error) {
 	query := "SELECT short_url, orig_url FROM short2orig WHERE user_id = $1"
 	rows, err := storage.db.QueryContext(ctx, query, userID)
@@ -110,6 +116,7 @@ func (storage *storageDB) GetUserURLS(ctx context.Context, userID string) ([]Ite
 	return result, nil
 }
 
+// GetShort return short url by orig from storage
 func (storage *storageDB) GetShort(ctx context.Context, url string) (string, bool, error) {
 	query := "SELECT short_url FROM short2orig WHERE orig_url = $1"
 	row := storage.db.QueryRowContext(ctx, query, url)
@@ -125,6 +132,7 @@ func (storage *storageDB) GetShort(ctx context.Context, url string) (string, boo
 	return "", false, fmt.Errorf("failed GetShort: %w", err)
 }
 
+// Set save record in db
 func (storage *storageDB) Set(ctx context.Context, key string, value string, userID string) error {
 	query := `INSERT INTO short2orig (short_url, orig_url, user_id)
 		VALUES ($1, $2, $3)
@@ -142,6 +150,7 @@ func (storage *storageDB) Set(ctx context.Context, key string, value string, use
 	return nil
 }
 
+// SetBatch save records in db
 func (storage *storageDB) SetBatch(ctx context.Context, data Short2orig, userID string) error {
 	// начать транзакцию
 	tx, err := storage.db.Begin()
@@ -173,10 +182,12 @@ func (storage *storageDB) SetBatch(ctx context.Context, data Short2orig, userID 
 	return nil
 }
 
+// Close close connect to db
 func (storage *storageDB) Close() error {
 	return storage.db.Close()
 }
 
+// Ping check connect ot db
 func (storage *storageDB) Ping(ctx context.Context) error {
 	err := storage.db.PingContext(ctx)
 	if err != nil {
@@ -185,6 +196,7 @@ func (storage *storageDB) Ping(ctx context.Context) error {
 	return nil
 }
 
+// DeleteUserURLS delete urls for user
 func (storage *storageDB) DeleteUserURLS(ctx context.Context, data models.RequestForDeleteURLS, userID string) error {
 	// начать транзакцию
 	tx, err := storage.db.Begin()

@@ -14,14 +14,25 @@ import (
 	"time"
 )
 
+// CookieName name of cookie fr saving userid
 const CookieName = "user_id"
+
+// TokenSep seperator for cookie value
 const TokenSep = "."
 
+// UserID type
 type UserID string
 
+// ErrCookieUserID error for empty cookie CookieName
 var ErrCookieUserID = fmt.Errorf("no valid cookie %s", CookieName)
+
+// ErrUserIDFromContext error when no userid in context
 var ErrUserIDFromContext = fmt.Errorf("no userid in context")
+
+// ErrBadToken error for bad cookir value format
 var ErrBadToken = errors.New("bad token")
+
+// ErrBadSignature error for signature
 var ErrBadSignature = errors.New("bad signature")
 
 var secret = []byte("somesecret")
@@ -66,6 +77,7 @@ func setCookieUserID(w http.ResponseWriter, value UserID) {
 	http.SetCookie(w, cookie)
 }
 
+// GetUserIDFromCookie get userid from cookie user_id
 func GetUserIDFromCookie(r *http.Request) (UserID, error) {
 	cookie, err := r.Cookie(CookieName)
 	if err != nil {
@@ -82,10 +94,12 @@ type userCtxKeyType string
 
 const userCtxKey userCtxKeyType = "userID"
 
+// WithUser helper set userid in context
 func WithUser(ctx context.Context, userID *UserID) context.Context {
 	return context.WithValue(ctx, userCtxKey, userID)
 }
 
+// GetUserID get userid from context
 // TODO ptr
 func GetUserID(ctx context.Context) (UserID, error) {
 	userID, ok := ctx.Value(userCtxKey).(*UserID)
@@ -95,6 +109,8 @@ func GetUserID(ctx context.Context) (UserID, error) {
 	return *userID, nil
 }
 
+// AuthMiddleware get userid from cookie and save it in context.
+// Or create userid, save it into context and set cookie
 func AuthMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID, err := GetUserIDFromCookie(r)

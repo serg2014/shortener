@@ -33,7 +33,7 @@ func Test_noUser(t *testing.T) {
 	require.Equal(t, "no user\n", string(respBody))
 }
 
-func httptestNewRequest_test(method string, url string, body io.Reader, headers map[string]string, userID string) *http.Request {
+func httptestNewRequestTest(method string, url string, body io.Reader, headers map[string]string, userID string) *http.Request {
 	req := httptest.NewRequest(method, url, body)
 	for k := range headers {
 		req.Header.Add(k, headers[k])
@@ -73,7 +73,7 @@ func TestCreateURL(t *testing.T) {
 		{
 			name: "no user",
 			a:    a,
-			req: httptestNewRequest_test(
+			req: httptestNewRequestTest(
 				http.MethodPost,
 				"/",
 				strings.NewReader("http://original.url/123"),
@@ -92,7 +92,7 @@ func TestCreateURL(t *testing.T) {
 		{
 			name: "empty url",
 			a:    a,
-			req: httptestNewRequest_test(
+			req: httptestNewRequestTest(
 				http.MethodPost,
 				"/",
 				strings.NewReader(""),
@@ -111,7 +111,7 @@ func TestCreateURL(t *testing.T) {
 		{
 			name: "problem with storage",
 			a:    a,
-			req: httptestNewRequest_test(
+			req: httptestNewRequestTest(
 				http.MethodPost,
 				"/",
 				strings.NewReader("http://ya.ru"),
@@ -142,7 +142,7 @@ func TestCreateURL(t *testing.T) {
 		{
 			name: "problem with storage GetShort",
 			a:    a,
-			req: httptestNewRequest_test(
+			req: httptestNewRequestTest(
 				http.MethodPost,
 				"/",
 				strings.NewReader("http://ya.ru"),
@@ -178,7 +178,7 @@ func TestCreateURL(t *testing.T) {
 		{
 			name: "can not find origurl",
 			a:    a,
-			req: httptestNewRequest_test(
+			req: httptestNewRequestTest(
 				http.MethodPost,
 				"/",
 				strings.NewReader("http://ya.ru"),
@@ -214,7 +214,7 @@ func TestCreateURL(t *testing.T) {
 		{
 			name: "already created",
 			a:    a,
-			req: httptestNewRequest_test(
+			req: httptestNewRequestTest(
 				http.MethodPost,
 				"/",
 				strings.NewReader("http://ya.ru"),
@@ -250,7 +250,7 @@ func TestCreateURL(t *testing.T) {
 		{
 			name: "success created",
 			a:    a,
-			req: httptestNewRequest_test(
+			req: httptestNewRequestTest(
 				http.MethodPost,
 				"/",
 				strings.NewReader("http://ya.ru"),
@@ -327,7 +327,7 @@ func TestCreateURLJson(t *testing.T) {
 		{
 			name: "error parse json. empty body",
 			a:    a,
-			req: httptestNewRequest_test(
+			req: httptestNewRequestTest(
 				http.MethodPost,
 				"/",
 				strings.NewReader("http://ya.ru"),
@@ -346,7 +346,7 @@ func TestCreateURLJson(t *testing.T) {
 		{
 			name: "error parse json. wrong type",
 			a:    a,
-			req: httptestNewRequest_test(
+			req: httptestNewRequestTest(
 				http.MethodPost,
 				"/",
 				strings.NewReader("[1]"),
@@ -365,7 +365,7 @@ func TestCreateURLJson(t *testing.T) {
 		{
 			name: "no user",
 			a:    a,
-			req: httptestNewRequest_test(
+			req: httptestNewRequestTest(
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{}`),
@@ -384,7 +384,7 @@ func TestCreateURLJson(t *testing.T) {
 		{
 			name: "empty url",
 			a:    a,
-			req: httptestNewRequest_test(
+			req: httptestNewRequestTest(
 				http.MethodPost,
 				"/",
 				strings.NewReader("{}"),
@@ -403,7 +403,7 @@ func TestCreateURLJson(t *testing.T) {
 		{
 			name: "empty url2",
 			a:    a,
-			req: httptestNewRequest_test(
+			req: httptestNewRequestTest(
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"url":""}`),
@@ -423,7 +423,7 @@ func TestCreateURLJson(t *testing.T) {
 		{
 			name: "problem with storage",
 			a:    a,
-			req: httptestNewRequest_test(
+			req: httptestNewRequestTest(
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"url":"http://ya.ru"}`),
@@ -454,7 +454,7 @@ func TestCreateURLJson(t *testing.T) {
 		{
 			name: "problem with storage GetShort",
 			a:    a,
-			req: httptestNewRequest_test(
+			req: httptestNewRequestTest(
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"url":"http://ya.ru"}`),
@@ -490,7 +490,7 @@ func TestCreateURLJson(t *testing.T) {
 		{
 			name: "can not find origurl",
 			a:    a,
-			req: httptestNewRequest_test(
+			req: httptestNewRequestTest(
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"url":"http://ya.ru"}`),
@@ -526,7 +526,7 @@ func TestCreateURLJson(t *testing.T) {
 		{
 			name: "already created",
 			a:    a,
-			req: httptestNewRequest_test(
+			req: httptestNewRequestTest(
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"url":"http://ya.ru"}`),
@@ -562,7 +562,7 @@ func TestCreateURLJson(t *testing.T) {
 		{
 			name: "success created",
 			a:    a,
-			req: httptestNewRequest_test(
+			req: httptestNewRequestTest(
 				http.MethodPost,
 				"/",
 				strings.NewReader(`{"url":"http://ya.ru"}`),
@@ -595,8 +595,8 @@ func TestCreateURLJson(t *testing.T) {
 	runTests(t, tests, func(newa *app.MyApp) http.HandlerFunc { return CreateURLJson(newa) })
 }
 
-func httptestNewRequest_test_chi(method string, url string, body io.Reader, headers map[string]string, userID string, chiKey string) *http.Request {
-	r := httptestNewRequest_test(method, url, body, headers, userID)
+func httptestNewRequestTestChi(method string, url string, body io.Reader, headers map[string]string, userID string, chiKey string) *http.Request {
+	r := httptestNewRequestTest(method, url, body, headers, userID)
 	ctx := chi.NewRouteContext()
 	ctx.URLParams.Add("key", chiKey)
 	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, ctx))
@@ -612,7 +612,7 @@ func TestGetURL(t *testing.T) {
 		{
 			name: "bad url",
 			a:    a,
-			req: httptestNewRequest_test_chi(
+			req: httptestNewRequestTestChi(
 				http.MethodGet,
 				"/",
 				strings.NewReader(""),
@@ -639,7 +639,7 @@ func TestGetURL(t *testing.T) {
 		{
 			name: "deleted",
 			a:    a,
-			req: httptestNewRequest_test_chi(
+			req: httptestNewRequestTestChi(
 				http.MethodGet,
 				"/some_url",
 				strings.NewReader(""),
@@ -666,7 +666,7 @@ func TestGetURL(t *testing.T) {
 		{
 			name: "store error",
 			a:    a,
-			req: httptestNewRequest_test_chi(
+			req: httptestNewRequestTestChi(
 				http.MethodGet,
 				"/some_url",
 				strings.NewReader(""),
@@ -693,7 +693,7 @@ func TestGetURL(t *testing.T) {
 		{
 			name: "short url not found",
 			a:    a,
-			req: httptestNewRequest_test_chi(
+			req: httptestNewRequestTestChi(
 				http.MethodGet,
 				"/some_url",
 				strings.NewReader(""),
@@ -720,7 +720,7 @@ func TestGetURL(t *testing.T) {
 		{
 			name: "ok",
 			a:    a,
-			req: httptestNewRequest_test_chi(
+			req: httptestNewRequestTestChi(
 				http.MethodGet,
 				"/some_url",
 				strings.NewReader(""),

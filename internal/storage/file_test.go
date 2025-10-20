@@ -89,14 +89,14 @@ func Test_File_Set(t *testing.T) {
 				err = storage.Set(t.Context(), insert[0], insert[1], insert[2])
 				assert.Equal(t, test.expect, err)
 			}
-			allRows, err := readAllData_in_test(test.fileData)
+			allRows, err := readAllDataInTest(test.fileData)
 			require.NoError(t, err)
 			assert.Equal(t, test.writen, allRows)
 		})
 	}
 }
 
-func readAllData_in_test(file io.ReadWriter) (string, error) {
+func readAllDataInTest(file io.ReadWriter) (string, error) {
 	allRows := make([]byte, 0)
 	p := make([]byte, 10)
 	for i := true; i == true; {
@@ -143,7 +143,7 @@ func Test_File_SetBatch(t *testing.T) {
 			err = fileStorage.SetBatch(t.Context(), test.data, test.UserID)
 			require.NoError(t, err)
 
-			data, err := readAllData_in_test(test.fileData)
+			data, err := readAllDataInTest(test.fileData)
 			require.NoError(t, err)
 			assert.ElementsMatch(t, strings.Split(test.expect, "\n"), strings.Split(data, "\n"))
 		})

@@ -8,6 +8,7 @@ import (
 
 type Generate struct{}
 
+// GenerateShortKey generate random string(use characters [a-zA-Z0-9]) with length of storage.KeyLength
 func (g *Generate) GenerateShortKey() string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 

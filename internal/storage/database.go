@@ -16,7 +16,8 @@ import (
 	"github.com/serg2014/shortener/internal/models"
 )
 
-// размер столбца short_url в таблице short2orig
+// KeyLength length of shorten url
+// must correspond to column short_url in he table short2orig
 const KeyLength = 8
 
 var ErrConflict = errors.New("data conflict")

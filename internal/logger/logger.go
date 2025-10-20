@@ -1,3 +1,4 @@
+// add to logger http status of response and response size.
 package logger
 
 import (
@@ -10,7 +11,6 @@ import (
 )
 
 // Log будет доступен всему коду как синглтон.
-// Никакой код навыка, кроме функции Initialize, не должен модифицировать эту переменную.
 // По умолчанию установлен no-op-логер, который не выводит никаких сообщений.
 var Log *zap.Logger = zap.NewNop()
 

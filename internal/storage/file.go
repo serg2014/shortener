@@ -91,6 +91,8 @@ func (s *storageFile) Set(ctx context.Context, key string, value string, userID 
 	return s.saveRow(key, value, userID)
 }
 
+// SetBatch save range of data into file
+// BUG(Serg): если в data есть повторяющиеся данные запишем несколько строк вместо одной
 func (s *storageFile) SetBatch(ctx context.Context, data Short2orig, userID string) error {
 	s.m.Lock()
 	defer s.m.Unlock()

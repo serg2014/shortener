@@ -1,3 +1,4 @@
+// contains handlers for router
 package handlers
 
 import (
@@ -18,8 +19,7 @@ import (
 	"github.com/serg2014/shortener/internal/storage"
 )
 
-// var store = storage.NewStorage(nil)
-
+// createURL auxiliary function for reduce copy paste
 func createURL(ctx context.Context, a *app.MyApp, origURL string, userID auth.UserID, w http.ResponseWriter) (int, string, error) {
 	if origURL == "" {
 		logger.Log.Debug("empty url")
@@ -40,11 +40,13 @@ func createURL(ctx context.Context, a *app.MyApp, origURL string, userID auth.Us
 	return status, shortURL, nil
 }
 
+// noUser auxiliary function return StatusInternalServerError with body `no user`
 func noUser(w http.ResponseWriter, err error) {
 	logger.Log.Error("can not find userid", zap.Error(err))
 	http.Error(w, "no user", http.StatusInternalServerError)
 }
 
+// CreateURL handler for genereate short url
 func CreateURL(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
@@ -69,7 +71,7 @@ func CreateURL(a *app.MyApp) http.HandlerFunc {
 	}
 }
 
-// TODO copy paste
+// CreateURLJson handler for genereate short url. Input and output in json
 func CreateURLJson(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req models.Request
@@ -107,6 +109,7 @@ func CreateURLJson(a *app.MyApp) http.HandlerFunc {
 	}
 }
 
+// GetURL handler for get original url by short
 func GetURL(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "key")
@@ -132,6 +135,7 @@ func GetURL(a *app.MyApp) http.HandlerFunc {
 	}
 }
 
+// Ping handler ping db
 func Ping(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
@@ -146,7 +150,7 @@ func Ping(a *app.MyApp) http.HandlerFunc {
 	}
 }
 
-// TODO copy paste func CreateURL2
+// CreateURLBatch handler for generate short urls by batch request
 func CreateURLBatch(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, err := auth.GetUserID(r.Context())
@@ -186,6 +190,7 @@ func CreateURLBatch(a *app.MyApp) http.HandlerFunc {
 	}
 }
 
+// GetUserURLS handler return all short url created by user
 func GetUserURLS(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, err := auth.GetUserID(r.Context())
@@ -218,6 +223,7 @@ func GetUserURLS(a *app.MyApp) http.HandlerFunc {
 	}
 }
 
+// DeleteUserURLS handler for delete short url
 func DeleteUserURLS(a *app.MyApp) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, err := auth.GetUserID(r.Context())

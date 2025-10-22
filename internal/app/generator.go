@@ -25,7 +25,7 @@ func (g *Generate) GenerateShortKey() (string, error) {
 	return string(shortKey), nil
 }
 
-// Genarator iterface
-type Genarator interface {
+// Generator iterface
+type Generator interface {
 	GenerateShortKey() (string, error)
 }

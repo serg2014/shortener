@@ -10,31 +10,31 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockGenarator is a mock of Genarator interface.
-type MockGenarator struct {
+// MockGenerator is a mock of Generator interface.
+type MockGenerator struct {
 	ctrl     *gomock.Controller
-	recorder *MockGenaratorMockRecorder
+	recorder *MockGeneratorMockRecorder
 }
 
-// MockGenaratorMockRecorder is the mock recorder for MockGenarator.
-type MockGenaratorMockRecorder struct {
-	mock *MockGenarator
+// MockGeneratorMockRecorder is the mock recorder for MockGenerator.
+type MockGeneratorMockRecorder struct {
+	mock *MockGenerator
 }
 
-// NewMockGenarator creates a new mock instance.
-func NewMockGenarator(ctrl *gomock.Controller) *MockGenarator {
-	mock := &MockGenarator{ctrl: ctrl}
-	mock.recorder = &MockGenaratorMockRecorder{mock}
+// NewMockGenerator creates a new mock instance.
+func NewMockGenerator(ctrl *gomock.Controller) *MockGenerator {
+	mock := &MockGenerator{ctrl: ctrl}
+	mock.recorder = &MockGeneratorMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockGenarator) EXPECT() *MockGenaratorMockRecorder {
+func (m *MockGenerator) EXPECT() *MockGeneratorMockRecorder {
 	return m.recorder
 }
 
 // GenerateShortKey mocks base method.
-func (m *MockGenarator) GenerateShortKey() (string, error) {
+func (m *MockGenerator) GenerateShortKey() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GenerateShortKey")
 	ret0, _ := ret[0].(string)
@@ -43,7 +43,7 @@ func (m *MockGenarator) GenerateShortKey() (string, error) {
 }
 
 // GenerateShortKey indicates an expected call of GenerateShortKey.
-func (mr *MockGenaratorMockRecorder) GenerateShortKey() *gomock.Call {
+func (mr *MockGeneratorMockRecorder) GenerateShortKey() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateShortKey", reflect.TypeOf((*MockGenarator)(nil).GenerateShortKey))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateShortKey", reflect.TypeOf((*MockGenerator)(nil).GenerateShortKey))
 }

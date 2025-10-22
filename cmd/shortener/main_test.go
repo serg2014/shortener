@@ -279,7 +279,7 @@ func Test_CreateURL_database(t *testing.T) {
 	// создадим конроллер моков и экземпляр мок-хранилища
 	ctrl := gomock.NewController(t)
 	store := mock.NewMockStorager(ctrl)
-	gen := appmock.NewMockGenarator(ctrl)
+	gen := appmock.NewMockGenerator(ctrl)
 	a := app.NewApp(store, gen)
 	ts := httptest.NewServer(Router(a))
 	defer ts.Close()
@@ -525,7 +525,7 @@ func TestCreateURLJson_database(t *testing.T) {
 	// создадим конроллер моков и экземпляр мок-хранилища
 	ctrl := gomock.NewController(t)
 	store := mock.NewMockStorager(ctrl)
-	gen := appmock.NewMockGenarator(ctrl)
+	gen := appmock.NewMockGenerator(ctrl)
 	a := app.NewApp(store, gen)
 	ts := httptest.NewServer(Router(a))
 	defer ts.Close()
@@ -753,7 +753,7 @@ func TestCreateURLBatch_database(t *testing.T) {
 	// создадим конроллер моков и экземпляр мок-хранилища
 	ctrl := gomock.NewController(t)
 	store := mock.NewMockStorager(ctrl)
-	gen := appmock.NewMockGenarator(ctrl)
+	gen := appmock.NewMockGenerator(ctrl)
 	a := app.NewApp(store, gen)
 	ts := httptest.NewServer(Router(a))
 	defer ts.Close()

@@ -65,7 +65,7 @@ func TestCreateURL(t *testing.T) {
 	// создадим конроллер моков и экземпляр мок-хранилища, а так же мок генерилки
 	ctrl := gomock.NewController(t)
 	store := mock.NewMockStorager(ctrl)
-	gen := appmock.NewMockGenarator(ctrl)
+	gen := appmock.NewMockGenerator(ctrl)
 	a := app.NewApp(store, gen)
 
 	tests := []myTest{
@@ -320,7 +320,7 @@ func TestCreateURLJson(t *testing.T) {
 	// создадим конроллер моков и экземпляр мок-хранилища, а так же мок генерилки
 	ctrl := gomock.NewController(t)
 	store := mock.NewMockStorager(ctrl)
-	gen := appmock.NewMockGenarator(ctrl)
+	gen := appmock.NewMockGenerator(ctrl)
 	a := app.NewApp(store, gen)
 
 	tests := []myTest{
@@ -605,7 +605,7 @@ func TestGetURL(t *testing.T) {
 	// создадим конроллер моков и экземпляр мок-хранилища, а так же мок генерилки
 	ctrl := gomock.NewController(t)
 	store := mock.NewMockStorager(ctrl)
-	gen := appmock.NewMockGenarator(ctrl)
+	gen := appmock.NewMockGenerator(ctrl)
 	a := app.NewApp(store, gen)
 
 	tests := []myTest{

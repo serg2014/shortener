@@ -19,11 +19,11 @@ type MyApp struct {
 	store storage.Storager
 	// канал для отложенной отправки новых сообщений
 	msgChan chan storage.Message
-	gen     Genarator
+	gen     Generator
 }
 
 // NewApp constructor of *MyApp
-func NewApp(store storage.Storager, gen Genarator) *MyApp {
+func NewApp(store storage.Storager, gen Generator) *MyApp {
 	if gen == nil {
 		gen = &Generate{}
 	}

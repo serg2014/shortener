@@ -4,6 +4,11 @@ import (
 	"compress/gzip"
 	"io"
 	"net/http"
+	"slices"
+	"strings"
+	"sync"
+
+	"github.com/serg2014/shortener/internal/logger"
 )
 
 // compressWriter реализует интерфейс http.ResponseWriter и позволяет прозрачно для сервера
@@ -83,4 +88,53 @@ func (c *compressReader) Close() error {
 		return err
 	}
 	return c.zr.Close()
+}
+
+// gzipMiddleware middleware для сжатия/разжатия gzip
+func gzipMiddleware(pool *sync.Pool) func(http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// по умолчанию устанавливаем оригинальный http.ResponseWriter как тот,
+			// который будем передавать следующей функции
+			ow := w
+
+			// проверяем, что клиент умеет получать от сервера сжатые данные в формате gzip
+			acceptEncoding := strings.Split(r.Header.Get("Accept-Encoding"), ", ")
+			supportsGzip := slices.Index(acceptEncoding, "gzip") != -1
+			logger.Log.Sugar().Infof("acceptEncoding: %s, supportsGzip: %t", acceptEncoding, supportsGzip)
+			if supportsGzip {
+				gzw := pool.Get().(*gzip.Writer)
+				gzw.Reset(w)
+				// оборачиваем оригинальный http.ResponseWriter новым с поддержкой сжатия
+				cw := newCompressWriter(gzw, w)
+				// меняем оригинальный http.ResponseWriter на новый
+				ow = cw
+
+				defer func() {
+					// не забываем отправить клиенту все сжатые данные после завершения middleware
+					cw.Close()
+					// вернуть в буфер
+					pool.Put(gzw)
+				}()
+			}
+
+			// проверяем, что клиент отправил серверу сжатые данные в формате gzip
+			contentEncoding := strings.Split(r.Header.Get("Content-Encoding"), ", ")
+			sendsGzip := slices.Index(contentEncoding, "gzip") != -1
+			if sendsGzip {
+				// оборачиваем тело запроса в io.Reader с поддержкой декомпрессии
+				cr, err := newCompressReader(r.Body)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				// меняем тело запроса на новое
+				r.Body = cr
+				defer cr.Close()
+			}
+
+			// передаём управление хендлеру
+			h.ServeHTTP(ow, r)
+		})
+	}
 }

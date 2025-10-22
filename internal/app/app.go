@@ -37,8 +37,12 @@ func NewApp(store storage.Storager, gen Genarator) *MyApp {
 
 // GenerateShortURL
 func (a *MyApp) GenerateShortURL(ctx context.Context, origURL string, userID auth.UserID) (string, error) {
-	shortURL := a.gen.GenerateShortKey()
-	err := a.store.Set(ctx, shortURL, origURL, string(userID))
+	shortURL, err := a.gen.GenerateShortKey()
+	if err != nil {
+		return "", fmt.Errorf("GenerateShortKey: %w", err)
+	}
+
+	err = a.store.Set(ctx, shortURL, origURL, string(userID))
 	if err != nil {
 		if !errors.Is(err, storage.ErrConflict) {
 			return "", err
@@ -67,7 +71,10 @@ func (a *MyApp) GenerateShortURLBatch(ctx context.Context, req models.RequestBat
 	short2orig := make(map[string]string, len(req))
 	for i := range req {
 		resp[i].CorrelationID = req[i].CorrelationID
-		id := a.gen.GenerateShortKey()
+		id, err := a.gen.GenerateShortKey()
+		if err != nil {
+			return models.ResponseBatch{}, err
+		}
 		resp[i].ShortURL = URLTemplate(id)
 		short2orig[id] = req[i].OriginalURL
 	}

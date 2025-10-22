@@ -120,7 +120,7 @@ func TestCreateURL(t *testing.T) {
 			),
 			genMock: []func() *gomock.Call{
 				func() *gomock.Call {
-					return gen.EXPECT().GenerateShortKey().Return("a1234567")
+					return gen.EXPECT().GenerateShortKey().Return("a1234567", nil)
 				},
 			},
 			storeMock: []func() *gomock.Call{
@@ -151,7 +151,7 @@ func TestCreateURL(t *testing.T) {
 			),
 			genMock: []func() *gomock.Call{
 				func() *gomock.Call {
-					return gen.EXPECT().GenerateShortKey().Return("a1234567")
+					return gen.EXPECT().GenerateShortKey().Return("a1234567", nil)
 				},
 			},
 			storeMock: []func() *gomock.Call{
@@ -187,7 +187,7 @@ func TestCreateURL(t *testing.T) {
 			),
 			genMock: []func() *gomock.Call{
 				func() *gomock.Call {
-					return gen.EXPECT().GenerateShortKey().Return("a1234567")
+					return gen.EXPECT().GenerateShortKey().Return("a1234567", nil)
 				},
 			},
 			storeMock: []func() *gomock.Call{
@@ -223,7 +223,7 @@ func TestCreateURL(t *testing.T) {
 			),
 			genMock: []func() *gomock.Call{
 				func() *gomock.Call {
-					return gen.EXPECT().GenerateShortKey().Return("a1234567")
+					return gen.EXPECT().GenerateShortKey().Return("a1234567", nil)
 				},
 			},
 			storeMock: []func() *gomock.Call{
@@ -259,7 +259,7 @@ func TestCreateURL(t *testing.T) {
 			),
 			genMock: []func() *gomock.Call{
 				func() *gomock.Call {
-					return gen.EXPECT().GenerateShortKey().Return("a1234567")
+					return gen.EXPECT().GenerateShortKey().Return("a1234567", nil)
 				},
 			},
 			storeMock: []func() *gomock.Call{
@@ -432,7 +432,7 @@ func TestCreateURLJson(t *testing.T) {
 			),
 			genMock: []func() *gomock.Call{
 				func() *gomock.Call {
-					return gen.EXPECT().GenerateShortKey().Return("a1234567")
+					return gen.EXPECT().GenerateShortKey().Return("a1234567", nil)
 				},
 			},
 			storeMock: []func() *gomock.Call{
@@ -463,7 +463,7 @@ func TestCreateURLJson(t *testing.T) {
 			),
 			genMock: []func() *gomock.Call{
 				func() *gomock.Call {
-					return gen.EXPECT().GenerateShortKey().Return("a1234567")
+					return gen.EXPECT().GenerateShortKey().Return("a1234567", nil)
 				},
 			},
 			storeMock: []func() *gomock.Call{
@@ -499,7 +499,7 @@ func TestCreateURLJson(t *testing.T) {
 			),
 			genMock: []func() *gomock.Call{
 				func() *gomock.Call {
-					return gen.EXPECT().GenerateShortKey().Return("a1234567")
+					return gen.EXPECT().GenerateShortKey().Return("a1234567", nil)
 				},
 			},
 			storeMock: []func() *gomock.Call{
@@ -535,7 +535,7 @@ func TestCreateURLJson(t *testing.T) {
 			),
 			genMock: []func() *gomock.Call{
 				func() *gomock.Call {
-					return gen.EXPECT().GenerateShortKey().Return("a1234567")
+					return gen.EXPECT().GenerateShortKey().Return("a1234567", nil)
 				},
 			},
 			storeMock: []func() *gomock.Call{
@@ -571,7 +571,7 @@ func TestCreateURLJson(t *testing.T) {
 			),
 			genMock: []func() *gomock.Call{
 				func() *gomock.Call {
-					return gen.EXPECT().GenerateShortKey().Return("a1234567")
+					return gen.EXPECT().GenerateShortKey().Return("a1234567", nil)
 				},
 			},
 			storeMock: []func() *gomock.Call{

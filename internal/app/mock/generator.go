@@ -34,11 +34,12 @@ func (m *MockGenarator) EXPECT() *MockGenaratorMockRecorder {
 }
 
 // GenerateShortKey mocks base method.
-func (m *MockGenarator) GenerateShortKey() string {
+func (m *MockGenarator) GenerateShortKey() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GenerateShortKey")
 	ret0, _ := ret[0].(string)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // GenerateShortKey indicates an expected call of GenerateShortKey.

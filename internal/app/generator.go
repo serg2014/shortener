@@ -1,7 +1,8 @@
 package app
 
 import (
-	"math/rand"
+	"crypto/rand"
+	"math/big"
 
 	"github.com/serg2014/shortener/internal/storage"
 )
@@ -10,17 +11,21 @@ import (
 type Generate struct{}
 
 // GenerateShortKey generate random string(use characters [a-zA-Z0-9]) with length of storage.KeyLength
-func (g *Generate) GenerateShortKey() string {
+func (g *Generate) GenerateShortKey() (string, error) {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 	shortKey := make([]byte, storage.KeyLength)
 	for i := range shortKey {
-		shortKey[i] = charset[rand.Intn(len(charset))]
+		index, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			return "", err
+		}
+		shortKey[i] = charset[index.Int64()]
 	}
-	return string(shortKey)
+	return string(shortKey), nil
 }
 
 // Genarator iterface
 type Genarator interface {
-	GenerateShortKey() string
+	GenerateShortKey() (string, error)
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"compress/gzip"
 	"context"
 	"errors"
@@ -97,8 +96,7 @@ func Router(a *app.MyApp) chi.Router {
 
 	pool := &sync.Pool{
 		New: func() any {
-			var buf bytes.Buffer
-			return gzip.NewWriter(&buf)
+			return gzip.NewWriter(nil)
 		},
 	}
 

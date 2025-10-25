@@ -1,3 +1,5 @@
+// package config make cofiguration for app. Get gofig options from env and flags.
+// Env has priority.
 package config
 
 import (
@@ -11,25 +13,40 @@ import (
 )
 
 type config struct {
-	Host            string `env:"SERVER_ADDRESS"`
-	Port            uint64
-	BaseURL         string `env:"BASE_URL"`
-	LogLevel        string `env:"LOG_LEVEL"`
+	// Host is hostname where app will work
+	Host string `env:"SERVER_ADDRESS"`
+	// Port is the number of port where app will work
+	Port uint64
+	// BaseURL - external hostname of the app
+	BaseURL string `env:"BASE_URL"`
+	// LogLevel - logging level
+	LogLevel string `env:"LOG_LEVEL"`
+	// FileStoragePath - path to the file where storage will save
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
-	DatabaseDSN     string `env:"DATABASE_DSN"`
+	// DatabaseDSN - dsn for connect ot database
+	DatabaseDSN string `env:"DATABASE_DSN"`
 }
 
-var Config = &config{
-	Host:            "localhost",
-	Port:            8080,
-	BaseURL:         "",
-	LogLevel:        "",
-	FileStoragePath: "",
+// newConfig create a new *config
+func newConfig() *config {
+	return &config{
+		Host:            "localhost",
+		Port:            8080,
+		BaseURL:         "",
+		LogLevel:        "",
+		FileStoragePath: "",
+	}
 }
 
+// global var. use it as singleton
+var Config = newConfig()
+
+// String flag.Value interface
 func (c *config) String() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }
+
+// Set flag.Value interface
 func (c *config) Set(flagValue string) error {
 	host, portStr, err := net.SplitHostPort(flagValue)
 	if err != nil {
@@ -48,6 +65,7 @@ func (c *config) Set(flagValue string) error {
 	return nil
 }
 
+// URL - return BaseURL(if set) or default value.
 func (c *config) URL() string {
 	if c.BaseURL != "" {
 		return c.BaseURL
@@ -55,6 +73,7 @@ func (c *config) URL() string {
 	return fmt.Sprintf("http://%s:%d/", Config.Host, Config.Port)
 }
 
+// InitConfig - initialize config
 func (c *config) InitConfig() error {
 	flag.Var(c, "a", "Net address host:port")
 	flag.StringVar(&c.BaseURL, "b", "", "Like http://ya.ru")

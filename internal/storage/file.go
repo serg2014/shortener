@@ -4,13 +4,16 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"io"
 	"os"
 
-	"github.com/serg2014/shortener/internal/logger"
 	"go.uber.org/zap"
+
+	"github.com/serg2014/shortener/internal/logger"
 )
 
-type item struct {
+// Item one row file representation
+type Item struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 	UserID      string `json:"user_id,omitempty"`
@@ -18,22 +21,16 @@ type item struct {
 
 type storageFile struct {
 	storage
-	file *os.File
+	file io.ReadWriter
 }
 
-func NewStorageFile(filePath string) (Storager, error) {
-	// os.O_APPEND os.O_SYNC
-	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		return nil, err
-	}
-
+func newStorageIO(file io.ReadWriter) (Storager, error) {
 	scanner := bufio.NewScanner(file)
-	var item item
+	var item Item
 	s := storageFile{
 		file: file,
 		storage: storage{
-			short2orig: make(short2orig),
+			short2orig: make(Short2orig),
 			orig2short: make(orig2short),
 			users:      make(users),
 		},
@@ -66,7 +63,7 @@ func NewStorageFile(filePath string) (Storager, error) {
 		s.orig2short[item.OriginalURL] = item.ShortURL
 
 		if _, ok := s.users[item.UserID]; !ok {
-			s.users[item.UserID] = make(short2orig)
+			s.users[item.UserID] = make(Short2orig)
 		}
 		s.users[item.UserID][item.ShortURL] = item.OriginalURL
 	}
@@ -76,10 +73,21 @@ func NewStorageFile(filePath string) (Storager, error) {
 	return &s, nil
 }
 
+// NewStorageFile create file storage type *storageFile
+func NewStorageFile(filePath string) (Storager, error) {
+	// os.O_APPEND os.O_SYNC
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		return nil, err
+	}
+	return newStorageIO(file)
+}
+
+// Set save record in file
 func (s *storageFile) Set(ctx context.Context, key string, value string, userID string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
-	err := s.set(ctx, key, value, userID)
+	err := s.set(key, value, userID)
 	if err != nil {
 		return err
 	}
@@ -87,12 +95,14 @@ func (s *storageFile) Set(ctx context.Context, key string, value string, userID 
 	return s.saveRow(key, value, userID)
 }
 
-func (s *storageFile) SetBatch(ctx context.Context, data short2orig, userID string) error {
+// SetBatch save range of data into file
+// BUG(Serg): если в data есть повторяющиеся данные запишем несколько строк вместо одной
+func (s *storageFile) SetBatch(ctx context.Context, data Short2orig, userID string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
 	if _, ok := s.users[userID]; !ok {
-		s.users[userID] = make(short2orig)
+		s.users[userID] = make(Short2orig)
 	}
 
 	for key, value := range data {
@@ -112,7 +122,7 @@ func (s *storageFile) SetBatch(ctx context.Context, data short2orig, userID stri
 
 // TODO flush
 func (s *storageFile) saveRow(shortURL, originalURL string, userID string) error {
-	itemData := item{ShortURL: shortURL, OriginalURL: originalURL, UserID: userID}
+	itemData := Item{ShortURL: shortURL, OriginalURL: originalURL, UserID: userID}
 	line, err := json.Marshal(itemData)
 	if err != nil {
 		return err
@@ -121,31 +131,15 @@ func (s *storageFile) saveRow(shortURL, originalURL string, userID string) error
 	if err != nil {
 		return err
 	}
-	_, err = s.file.WriteString("\n")
+	_, err = s.file.Write([]byte("\n"))
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
+// Close close connect to file/db
 func (s *storageFile) Close() error {
 	// TODO flush
 	return nil
 }
-
-/*
-func (s *storageFile) SaveAllData() error {
-	s.m.Lock()
-	defer s.m.Unlock()
-	s.file.Seek(0, io.SeekStart)
-
-	for k := range s.short2orig {
-		// TODO в случае ошибки не запишем хвост
-		err := s.saveRow(k, s.short2orig[k])
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-*/

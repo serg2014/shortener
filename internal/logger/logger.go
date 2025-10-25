@@ -1,15 +1,16 @@
+// add to logger http status of response and response size, request method, request uri...
 package logger
 
 import (
 	"net/http"
 	"time"
 
-	"github.com/serg2014/shortener/internal/auth"
 	"go.uber.org/zap"
+
+	"github.com/serg2014/shortener/internal/auth"
 )
 
 // Log будет доступен всему коду как синглтон.
-// Никакой код навыка, кроме функции Initialize, не должен модифицировать эту переменную.
 // По умолчанию установлен no-op-логер, который не выводит никаких сообщений.
 var Log *zap.Logger = zap.NewNop()
 
@@ -48,6 +49,7 @@ type (
 	}
 )
 
+// Write implement Write of http.ResponseWriter
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 	// записываем ответ, используя оригинальный http.ResponseWriter
 	size, err := r.ResponseWriter.Write(b)
@@ -55,20 +57,11 @@ func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 	return size, err
 }
 
+// WriteHeader implement WriteHeader of http.ResponseWriter
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	// записываем код статуса, используя оригинальный http.ResponseWriter
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode // захватываем код статуса
-}
-
-func RequestLogger(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		Log.Info("got incoming HTTP request",
-			zap.String("method", r.Method),
-			zap.String("path", r.URL.Path),
-		)
-		h(w, r)
-	}
 }
 
 // WithLogging добавляет дополнительный код для регистрации сведений о запросе

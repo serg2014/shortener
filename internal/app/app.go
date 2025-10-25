@@ -4,43 +4,45 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
+
+	"go.uber.org/zap"
 
 	"github.com/serg2014/shortener/internal/auth"
 	"github.com/serg2014/shortener/internal/config"
 	"github.com/serg2014/shortener/internal/logger"
 	"github.com/serg2014/shortener/internal/models"
 	"github.com/serg2014/shortener/internal/storage"
-	"go.uber.org/zap"
 )
 
+// MyApp type for application
 type MyApp struct {
 	store storage.Storager
 	// канал для отложенной отправки новых сообщений
 	msgChan chan storage.Message
+	gen     Generator
 }
 
-func NewApp(store storage.Storager) *MyApp {
+// NewApp constructor of *MyApp
+func NewApp(store storage.Storager, gen Generator) *MyApp {
+	if gen == nil {
+		gen = &Generate{}
+	}
 	app := &MyApp{
 		store:   store,
 		msgChan: make(chan storage.Message, 1024),
+		gen:     gen,
 	}
 	return app
 }
 
-func generateShortKey() string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
-	shortKey := make([]byte, storage.KeyLength)
-	for i := range shortKey {
-		shortKey[i] = charset[rand.Intn(len(charset))]
-	}
-	return string(shortKey)
-}
-
+// GenerateShortURL
 func (a *MyApp) GenerateShortURL(ctx context.Context, origURL string, userID auth.UserID) (string, error) {
-	shortURL := generateShortKey()
-	err := a.store.Set(ctx, shortURL, origURL, string(userID))
+	shortURL, err := a.gen.GenerateShortKey()
+	if err != nil {
+		return "", fmt.Errorf("GenerateShortKey: %w", err)
+	}
+
+	err = a.store.Set(ctx, shortURL, origURL, string(userID))
 	if err != nil {
 		if !errors.Is(err, storage.ErrConflict) {
 			return "", err
@@ -58,16 +60,21 @@ func (a *MyApp) GenerateShortURL(ctx context.Context, origURL string, userID aut
 	return URLTemplate(shortURL), nil
 }
 
+// URLTemplate return url for getting orig url by short
 func URLTemplate(id string) string {
 	return fmt.Sprintf("%s%s", config.Config.URL(), id)
 }
 
+// GenerateShortURLBatch save records in storage
 func (a *MyApp) GenerateShortURLBatch(ctx context.Context, req models.RequestBatch, userID auth.UserID) (models.ResponseBatch, error) {
 	resp := make(models.ResponseBatch, len(req))
 	short2orig := make(map[string]string, len(req))
 	for i := range req {
 		resp[i].CorrelationID = req[i].CorrelationID
-		id := generateShortKey()
+		id, err := a.gen.GenerateShortKey()
+		if err != nil {
+			return models.ResponseBatch{}, err
+		}
 		resp[i].ShortURL = URLTemplate(id)
 		short2orig[id] = req[i].OriginalURL
 	}
@@ -76,6 +83,7 @@ func (a *MyApp) GenerateShortURLBatch(ctx context.Context, req models.RequestBat
 	return resp, err
 }
 
+// GetUserURLS find all user data in storage
 func (a *MyApp) GetUserURLS(ctx context.Context, userID auth.UserID) (models.ResponseUser, error) {
 	data, err := a.store.GetUserURLS(ctx, string(userID))
 	if err != nil {
@@ -89,6 +97,7 @@ func (a *MyApp) GetUserURLS(ctx context.Context, userID auth.UserID) (models.Res
 	return resp, nil
 }
 
+// DeleteUserURLS send records for delete into chan
 func (a *MyApp) DeleteUserURLS(ctx context.Context, req models.RequestForDeleteURLS, userID auth.UserID) error {
 	// TODO uniq input
 	// TODO req может быть большим, можно побить на чанки
@@ -99,6 +108,7 @@ func (a *MyApp) DeleteUserURLS(ctx context.Context, req models.RequestForDeleteU
 	return nil
 }
 
+// DeleteUserURLsBackground set delete flag for record in the backgroud. Data for delete get from chan
 func (a *MyApp) DeleteUserURLsBackground(ctx context.Context) {
 	for {
 		select {
@@ -113,14 +123,17 @@ func (a *MyApp) DeleteUserURLsBackground(ctx context.Context) {
 	}
 }
 
+// Get get record from storage
 func (a *MyApp) Get(ctx context.Context, id string) (string, bool, error) {
 	return a.store.Get(ctx, id)
 }
 
+// Set save record in storage
 func (a *MyApp) Set(ctx context.Context, key, value string, userID auth.UserID) error {
 	return a.store.Set(ctx, key, value, string(userID))
 }
 
+// Ping check connect ot db
 func (a *MyApp) Ping(ctx context.Context) error {
 	return a.store.Ping(ctx)
 }

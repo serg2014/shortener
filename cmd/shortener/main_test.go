@@ -19,6 +19,7 @@ import (
 	"github.com/serg2014/shortener/internal/storage/mock"
 )
 
+//lint:ignore U1000 тренируемся отключать проверки
 func testRequest(t *testing.T, ts *httptest.Server, req *http.Request) (*http.Response, string) {
 	client := ts.Client()
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
@@ -141,8 +142,9 @@ func TestCreateURL(t *testing.T) {
 	type want struct {
 		contentType string
 		statusCode  int
-		location    string
-		response    string
+		//lint:ignore U1000 тренируемся отключать проверки
+		location string
+		response string
 	}
 	type kv struct {
 		key   string

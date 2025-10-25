@@ -1,11 +1,12 @@
+// Package models contains data type
 package models
 
-// Request
+// Request type
 type Request struct {
 	URL string `json:"url"`
 }
 
-// Response
+// Response type
 type Response struct {
 	Result string `json:"result"`
 }
@@ -16,7 +17,7 @@ type RequestBatchItem struct {
 	OriginalURL   string `json:"original_url"`
 }
 
-// RequestBatch
+// RequestBatch type for batch request
 type RequestBatch []RequestBatchItem
 
 // ResponseBatchItem item of ResponseBatch

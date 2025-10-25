@@ -1,4 +1,4 @@
-// package config make cofiguration for app. Get gofig options from env and flags.
+// Package config make cofiguration for app. Get gofig options from env and flags.
 // Env has priority.
 package config
 
@@ -38,7 +38,7 @@ func newConfig() *config {
 	}
 }
 
-// global var. use it as singleton
+// Config global var. use it as singleton
 var Config = newConfig()
 
 // String flag.Value interface

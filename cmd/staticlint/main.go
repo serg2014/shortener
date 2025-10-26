@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/serg2014/shortener/internal/checker/osexit"
 	"github.com/timakin/bodyclose/passes/bodyclose"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
@@ -43,6 +44,7 @@ func main() {
 		fieldalignment.Analyzer,
 		waitgroup.Analyzer,
 		bodyclose.Analyzer,
+		osexit.Analyzer,
 	}
 	checks := make(map[string]bool)
 	var checksPattern []string

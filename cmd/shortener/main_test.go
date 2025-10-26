@@ -45,26 +45,26 @@ func TestGetURL(t *testing.T) {
 
 	type want struct {
 		contentType string
-		statusCode  int
 		location    string
 		response    string
+		statusCode  int
 	}
 	type kv struct {
 		key   string
 		value string
 	}
 	type reqParam struct {
-		method     string
-		url        string
 		body       io.Reader
 		setHeaders map[string]string
+		method     string
+		url        string
 	}
 
 	tests := []struct {
 		name     string
-		want     want
-		reqParam reqParam
 		store    kv
+		reqParam reqParam
+		want     want
 	}{
 		{
 			name: "test 1",
@@ -73,8 +73,13 @@ func TestGetURL(t *testing.T) {
 				response:    "bad short url\n",
 				contentType: "text/plain; charset=utf-8",
 			},
-			reqParam: reqParam{http.MethodGet, "/abcdef12", nil, map[string]string{"Accept-Encoding": ""}},
-			store:    kv{},
+			reqParam: reqParam{
+				method:     http.MethodGet,
+				url:        "/abcdef12",
+				body:       nil,
+				setHeaders: map[string]string{"Accept-Encoding": ""},
+			},
+			store: kv{},
 		},
 		{
 			name: "test 2",
@@ -84,8 +89,13 @@ func TestGetURL(t *testing.T) {
 				response:    "",
 				contentType: "text/plain",
 			},
-			reqParam: reqParam{http.MethodGet, "/abcdefgh", nil, map[string]string{"Accept-Encoding": ""}},
-			store:    kv{"abcdefgh", "http://some.ru/123"},
+			reqParam: reqParam{
+				method:     http.MethodGet,
+				url:        "/abcdefgh",
+				body:       nil,
+				setHeaders: map[string]string{"Accept-Encoding": ""},
+			},
+			store: kv{"abcdefgh", "http://some.ru/123"},
 		},
 	}
 	for _, test := range tests {
@@ -141,25 +151,25 @@ func TestCreateURL(t *testing.T) {
 
 	type want struct {
 		contentType string
-		statusCode  int
 		//lint:ignore U1000 тренируемся отключать проверки
-		location string
-		response string
+		location   string
+		response   string
+		statusCode int
 	}
 	type kv struct {
 		key   string
 		value string
 	}
 	type reqParam struct {
+		body   io.Reader
 		method string
 		url    string
-		body   io.Reader
 	}
 	tests := []struct {
 		name     string
-		want     want
-		reqParam reqParam
 		store    kv
+		reqParam reqParam
+		want     want
 	}{
 		{
 			name: "test #1",
@@ -168,8 +178,12 @@ func TestCreateURL(t *testing.T) {
 				response:    app.URLTemplate(""),
 				contentType: "text/plain",
 			},
-			reqParam: reqParam{http.MethodPost, "/", strings.NewReader("http://some.ru/123")},
-			store:    kv{"aaaaaa", "http://some.ru/123"},
+			reqParam: reqParam{
+				method: http.MethodPost,
+				url:    "/",
+				body:   strings.NewReader("http://some.ru/123"),
+			},
+			store: kv{"aaaaaa", "http://some.ru/123"},
 		},
 	}
 	for _, test := range tests {
@@ -206,9 +220,9 @@ func TestCreateURL(t *testing.T) {
 }
 
 type expect struct {
-	code     int
-	response string
 	headers  map[string]string
+	response string
+	code     int
 }
 type reqParam struct {
 	method    string

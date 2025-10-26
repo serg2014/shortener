@@ -9,10 +9,10 @@ import (
 
 func TestNewStorage(t *testing.T) {
 	tests := []struct {
+		objType  Storager
 		name     string
 		filePath string
 		dsn      string
-		objType  Storager
 	}{
 		{
 			name:     "memory",
@@ -193,10 +193,10 @@ func TestGetShort(t *testing.T) {
 
 func TestSet(t *testing.T) {
 	tests := []struct {
+		expect  error
 		name    string
 		setArgs [3]string
 		prepare [][3]string
-		expect  error
 	}{
 		{
 			name: "set without error",

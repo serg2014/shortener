@@ -89,13 +89,13 @@ func Test_checkToken(t *testing.T) {
 
 func TestGetUserIDFromCookie(t *testing.T) {
 	type want struct {
-		userID UserID
 		err    error
+		userID UserID
 	}
 	tests := []struct {
+		expect    want
 		name      string
 		cookieVal string
-		expect    want
 	}{
 		{
 			name:      "good cookie",
@@ -138,9 +138,9 @@ func TestGetUserIDFromCookie(t *testing.T) {
 
 func TestAuthMiddleware(t *testing.T) {
 	tests := []struct {
+		nextHandler http.Handler
 		name        string
 		cookieVal   string
-		nextHandler http.Handler
 	}{
 		{
 			name:      "good userid from cookie",

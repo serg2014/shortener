@@ -15,8 +15,6 @@ import (
 type config struct {
 	// Host is hostname where app will work
 	Host string `env:"SERVER_ADDRESS"`
-	// Port is the number of port where app will work
-	Port uint64
 	// BaseURL - external hostname of the app
 	BaseURL string `env:"BASE_URL"`
 	// LogLevel - logging level
@@ -25,6 +23,8 @@ type config struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	// DatabaseDSN - dsn for connect ot database
 	DatabaseDSN string `env:"DATABASE_DSN"`
+	// Port is the number of port where app will work
+	Port uint64
 }
 
 // newConfig create a new *config

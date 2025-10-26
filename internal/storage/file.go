@@ -20,8 +20,8 @@ type Item struct {
 }
 
 type storageFile struct {
-	storage
 	file io.ReadWriter
+	storage
 }
 
 func newStorageIO(file io.ReadWriter) (Storager, error) {

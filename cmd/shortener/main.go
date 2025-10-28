@@ -29,7 +29,23 @@ import (
 // poolSize кол-во горутин обрабатывающих удаление урлов.
 const poolSize = 10
 
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
+
+func valueOrNA(str string) string {
+	if str == "" {
+		return "N/A"
+	}
+	return str
+}
+
 func main() {
+	fmt.Printf("Build version: %s\n", valueOrNA(buildVersion))
+	fmt.Printf("Build date: %s\n", valueOrNA(buildDate))
+	fmt.Printf("Build commit: %s\n", valueOrNA(buildCommit))
 	if err := run(); err != nil {
 		panic(err)
 	}

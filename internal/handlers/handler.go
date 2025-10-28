@@ -1,4 +1,4 @@
-// contains handlers for router
+// Package handlers contains handlers for router
 package handlers
 
 import (

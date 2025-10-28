@@ -20,7 +20,7 @@ type storage struct {
 	m          sync.RWMutex
 }
 
-// Message
+// Message type
 type Message struct {
 	UserID   string
 	ShortURL []string
@@ -134,7 +134,7 @@ func (s *storage) DeleteUserURLS(ctx context.Context, req models.RequestForDelet
 	return nil
 }
 
-// Storager
+// Storager interface
 type Storager interface {
 	Get(ctx context.Context, key string) (string, bool, error)
 	GetUserURLS(ctx context.Context, userID string) ([]Item, error)

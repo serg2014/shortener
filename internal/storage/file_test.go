@@ -12,8 +12,8 @@ import (
 
 func Test_File_newStorageIO(t *testing.T) {
 	tests := []struct {
-		name     string
 		fileData io.ReadWriter
+		name     string
 	}{
 		{
 			name: "one",
@@ -48,9 +48,9 @@ func Test_File_Set(t *testing.T) {
 	tests := []struct {
 		name     string
 		fileData io.ReadWriter
-		setArgs  [][3]string
 		expect   error
 		writen   string
+		setArgs  [][3]string
 	}{
 		{
 			name: "set without error",

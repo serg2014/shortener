@@ -17,5 +17,8 @@ func Example() {
 	defer store.Close()
 
 	app := app.NewApp(store, nil)
-	app.Ping(ctx)
+	err = app.Ping(ctx)
+	if err != nil {
+		panic(err)
+	}
 }

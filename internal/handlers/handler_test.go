@@ -48,17 +48,17 @@ func httptestNewRequestTest(method string, url string, body io.Reader, headers m
 
 type headers map[string]string
 type want struct {
-	statusCode int
 	headers    headers
 	body       string
+	statusCode int
 }
 type myTest struct {
 	name      string
 	a         *app.MyApp
 	req       *http.Request
+	want      want
 	storeMock []func() *gomock.Call
 	genMock   []func() *gomock.Call
-	want      want
 }
 
 func TestCreateURL(t *testing.T) {

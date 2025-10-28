@@ -16,9 +16,9 @@ import (
 func TestGzipMiddleware_compression(t *testing.T) {
 	data := []byte("Hello GO world!")
 	tests := []struct {
-		name        string
 		headers     map[string]string
 		nextHandler http.Handler
+		name        string
 	}{
 		{
 			name: "ok compression",
@@ -77,9 +77,9 @@ func TestGzipMiddleware_decompression(t *testing.T) {
 	data := []byte("Hello GO world!")
 	tests := []struct {
 		name        string
-		data        []byte
-		headers     map[string]string
 		nextHandler http.Handler
+		headers     map[string]string
+		data        []byte
 	}{
 		{
 			name: "ok decompression",

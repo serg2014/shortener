@@ -35,7 +35,7 @@ func NewApp(store storage.Storager, gen Generator) *MyApp {
 	return app
 }
 
-// GenerateShortURL
+// GenerateShortURL create short url
 func (a *MyApp) GenerateShortURL(ctx context.Context, origURL string, userID auth.UserID) (string, error) {
 	shortURL, err := a.gen.GenerateShortKey()
 	if err != nil {

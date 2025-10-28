@@ -1,3 +1,4 @@
+// Package app
 package app
 
 import (
@@ -7,7 +8,7 @@ import (
 	"github.com/serg2014/shortener/internal/storage"
 )
 
-// Generate
+// Generate type
 type Generate struct{}
 
 // GenerateShortKey generate random string(use characters [a-zA-Z0-9]) with length of storage.KeyLength

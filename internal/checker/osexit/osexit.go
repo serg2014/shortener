@@ -15,12 +15,14 @@ var Analyzer = &analysis.Analyzer{
 	Run:  run,
 }
 
+// visitor type for save internal state
 type visitor struct {
+	pass          *analysis.Pass
 	isMainFunc    bool
 	isMainPackage bool
-	pass          *analysis.Pass
 }
 
+// Visit method for interface ast.Visitor
 func (v *visitor) Visit(node ast.Node) ast.Visitor {
 	if node == nil {
 		return nil

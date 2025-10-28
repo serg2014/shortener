@@ -25,6 +25,9 @@ type ConfigData struct {
 	Staticcheck []string
 }
 
+// TODO
+// В staticlint используешь panic для обработки ошибок - лучше использовать log.Fatal
+// или возвращать ошибки из отдельной функции run()
 func main() {
 	appfile, err := os.Executable()
 	if err != nil {

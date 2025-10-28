@@ -15,7 +15,28 @@ var Analyzer = &analysis.Analyzer{
 	Run:  run,
 }
 
-var isMainFunc = false
+type visitor struct {
+	isMainFunc    bool
+	isMainPackage bool
+	pass          *analysis.Pass
+}
+
+func (v *visitor) Visit(node ast.Node) ast.Visitor {
+	if node == nil {
+		return nil
+	}
+	switch x := node.(type) {
+	case *ast.FuncDecl:
+		// file.Name.Name name of package
+		v.isMainFunc = x.Name.Name == "main"
+	case *ast.CallExpr: // вызов ф-ции
+		// file.Name.Name name of package
+		if v.isMainFunc && v.isMainPackage && isPkgDot(x.Fun, "os", "Exit") {
+			v.pass.Reportf(x.Pos(), "os.Exit in func main, package main")
+		}
+	}
+	return v
+}
 
 func isPkgDot(expr ast.Expr, pkg, name string) bool {
 	sel, ok := expr.(*ast.SelectorExpr)
@@ -34,21 +55,12 @@ func run(pass *analysis.Pass) (any, error) {
 				continue
 			}
 		}
-		// функцией ast.Inspect проходим по всем узлам AST
-		ast.Inspect(file, func(node ast.Node) bool {
-			switch x := node.(type) {
-			case *ast.FuncDecl:
-				// file.Name.Name name of package
-				isMainFunc = file.Name.Name == "main" && x.Name.Name == "main"
-			case *ast.CallExpr: // вызов ф-ции
-				// file.Name.Name name of package
-				if file.Name.Name == "main" && isMainFunc && isPkgDot(x.Fun, "os", "Exit") {
-					pass.Reportf(x.Pos(), "os.Exit in func main, package main")
-				}
-			}
-
-			return true
-		})
+		v := &visitor{
+			// file.Name.Name name of package
+			isMainPackage: file.Name.Name == "main",
+			pass:          pass,
+		}
+		ast.Walk(v, file)
 	}
 	return nil, nil
 }

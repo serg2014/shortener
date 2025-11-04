@@ -141,10 +141,32 @@ func run() error {
 		}
 	}()
 
-	logger.Log.Info("Running server", zap.String("address", config.Config.String()), zap.String("storage", fmt.Sprintf("%T", store)))
-	err = srv.ListenAndServe()
-	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		logger.Log.Panic("error in ListenAndServe", zap.Error(err))
+	logger.Log.Info("Running server",
+		zap.String("address", config.Config.String()),
+		zap.String("storage", fmt.Sprintf("%T", store)),
+		zap.Bool("https", config.Config.HTTPS),
+	)
+	// http
+	var lError error
+	if !config.Config.HTTPS {
+		lError = srv.ListenAndServe()
+	} else {
+		tmpDir, err := createCertTmpDir()
+		if err != nil {
+			return err
+		}
+		cert, pk, err := getCertPK(tmpDir)
+		if err != nil {
+			logger.Log.Error("tls error", zap.Error(err))
+			return err
+		}
+		logger.Log.Info("Paths", zap.String("cert path", cert), zap.String("pk path", pk))
+		defer deleteCertTmpDir(tmpDir)
+
+		lError = srv.ListenAndServeTLS(cert, pk)
+	}
+	if lError != nil && !errors.Is(lError, http.ErrServerClosed) {
+		logger.Log.Panic("error in ListenAndServe", zap.Error(lError))
 	}
 
 	// отменяем контекст, чтобы завершить горутины

@@ -21,6 +21,7 @@ func unsetEnvVars() {
 	os.Unsetenv("LOG_LEVEL")
 	os.Unsetenv("FILE_STORAGE_PATH")
 	os.Unsetenv("DATABASE_DSN")
+	os.Unsetenv("ENABLE_HTTPS")
 }
 
 func TestInitConfig(t *testing.T) {
@@ -52,6 +53,7 @@ func TestInitConfig(t *testing.T) {
 				LogLevel:        "debug",
 				FileStoragePath: "/file/path",
 				DatabaseDSN:     "dsn",
+				HTTPS:           true,
 			},
 			envVars: map[string]string{
 				"SERVER_ADDRESS":    "localhost2:9090",
@@ -59,6 +61,7 @@ func TestInitConfig(t *testing.T) {
 				"LOG_LEVEL":         "debug",
 				"FILE_STORAGE_PATH": "/file/path",
 				"DATABASE_DSN":      "dsn",
+				"ENABLE_HTTPS":      "true",
 			},
 			args: make([]string, 0),
 		},
@@ -71,6 +74,7 @@ func TestInitConfig(t *testing.T) {
 				LogLevel:        "debug",
 				FileStoragePath: "/file/path",
 				DatabaseDSN:     "dsn",
+				HTTPS:           true,
 			},
 			envVars: make(map[string]string),
 			args: []string{
@@ -79,6 +83,7 @@ func TestInitConfig(t *testing.T) {
 				"-l=debug",
 				"-f=/file/path",
 				"-d=dsn",
+				"-s=1",
 			},
 		},
 		{
@@ -90,6 +95,7 @@ func TestInitConfig(t *testing.T) {
 				LogLevel:        "error",
 				FileStoragePath: "/path/file",
 				DatabaseDSN:     "dsn-env",
+				HTTPS:           true,
 			},
 			envVars: map[string]string{
 				"SERVER_ADDRESS":    "localhost3:1010",
@@ -97,6 +103,7 @@ func TestInitConfig(t *testing.T) {
 				"LOG_LEVEL":         "error",
 				"FILE_STORAGE_PATH": "/path/file",
 				"DATABASE_DSN":      "dsn-env",
+				"ENABLE_HTTPS":      "true",
 			},
 			args: []string{
 				"-a=localhost2:9090",
@@ -104,6 +111,7 @@ func TestInitConfig(t *testing.T) {
 				"-l=debug",
 				"-f=/file/path",
 				"-d=dsn",
+				"-s=0",
 			},
 		},
 	}

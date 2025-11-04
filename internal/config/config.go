@@ -25,6 +25,8 @@ type config struct {
 	DatabaseDSN string `env:"DATABASE_DSN"`
 	// Port is the number of port where app will work
 	Port uint64
+	// HTTPS use https
+	HTTPS bool `env:"ENABLE_HTTPS"`
 }
 
 // newConfig create a new *config
@@ -70,7 +72,11 @@ func (c *config) URL() string {
 	if c.BaseURL != "" {
 		return c.BaseURL
 	}
-	return fmt.Sprintf("http://%s:%d/", Config.Host, Config.Port)
+	proto := "http"
+	if c.HTTPS {
+		proto = "https"
+	}
+	return fmt.Sprintf("%s://%s:%d/", proto, Config.Host, Config.Port)
 }
 
 // InitConfig - initialize config
@@ -80,6 +86,7 @@ func (c *config) InitConfig() error {
 	flag.StringVar(&c.LogLevel, "l", "info", "log level")
 	flag.StringVar(&c.FileStoragePath, "f", "", "path to storage file")
 	flag.StringVar(&c.DatabaseDSN, "d", "", "database dsn")
+	flag.BoolVar(&c.HTTPS, "s", false, "enable https")
 	flag.Parse()
 
 	var envConfig config
@@ -114,6 +121,10 @@ func (c *config) InitConfig() error {
 
 	if envConfig.DatabaseDSN != "" {
 		c.DatabaseDSN = envConfig.DatabaseDSN
+	}
+
+	if envConfig.HTTPS {
+		c.HTTPS = envConfig.HTTPS
 	}
 
 	return nil

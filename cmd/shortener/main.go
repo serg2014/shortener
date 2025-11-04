@@ -144,11 +144,11 @@ func run() error {
 	logger.Log.Info("Running server",
 		zap.String("address", config.Config.String()),
 		zap.String("storage", fmt.Sprintf("%T", store)),
-		zap.Bool("https", config.Config.HTTPS),
+		zap.Boolp("https", config.Config.HTTPS),
 	)
 	// http
 	var lError error
-	if !config.Config.HTTPS {
+	if config.Config.HTTPS == nil || !*config.Config.HTTPS {
 		lError = srv.ListenAndServe()
 	} else {
 		tmpDir, err := createCertTmpDir()

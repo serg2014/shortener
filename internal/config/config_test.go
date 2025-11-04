@@ -40,6 +40,7 @@ func TestInitConfig(t *testing.T) {
 				LogLevel:        "info",
 				FileStoragePath: "",
 				DatabaseDSN:     "",
+				HTTPS:           configFalsePtr,
 			},
 			envVars: make(map[string]string),
 			args:    make([]string, 0),
@@ -53,7 +54,7 @@ func TestInitConfig(t *testing.T) {
 				LogLevel:        "debug",
 				FileStoragePath: "/file/path",
 				DatabaseDSN:     "dsn",
-				HTTPS:           true,
+				HTTPS:           configTruePtr,
 			},
 			envVars: map[string]string{
 				"SERVER_ADDRESS":    "localhost2:9090",
@@ -74,7 +75,7 @@ func TestInitConfig(t *testing.T) {
 				LogLevel:        "debug",
 				FileStoragePath: "/file/path",
 				DatabaseDSN:     "dsn",
-				HTTPS:           true,
+				HTTPS:           configTruePtr,
 			},
 			envVars: make(map[string]string),
 			args: []string{
@@ -83,7 +84,7 @@ func TestInitConfig(t *testing.T) {
 				"-l=debug",
 				"-f=/file/path",
 				"-d=dsn",
-				"-s=1",
+				"-s",
 			},
 		},
 		{
@@ -95,7 +96,7 @@ func TestInitConfig(t *testing.T) {
 				LogLevel:        "error",
 				FileStoragePath: "/path/file",
 				DatabaseDSN:     "dsn-env",
-				HTTPS:           true,
+				HTTPS:           configFalsePtr,
 			},
 			envVars: map[string]string{
 				"SERVER_ADDRESS":    "localhost3:1010",
@@ -103,7 +104,7 @@ func TestInitConfig(t *testing.T) {
 				"LOG_LEVEL":         "error",
 				"FILE_STORAGE_PATH": "/path/file",
 				"DATABASE_DSN":      "dsn-env",
-				"ENABLE_HTTPS":      "true",
+				"ENABLE_HTTPS":      "false",
 			},
 			args: []string{
 				"-a=localhost2:9090",
@@ -111,7 +112,7 @@ func TestInitConfig(t *testing.T) {
 				"-l=debug",
 				"-f=/file/path",
 				"-d=dsn",
-				"-s=0",
+				"-s",
 			},
 		},
 	}
@@ -140,31 +141,44 @@ func TestInitConfig(t *testing.T) {
 func TestURL(t *testing.T) {
 	tests := []struct {
 		name    string
-		baseurl string
+		envVars map[string]string
 		expect  string
 	}{
 		{
-			name:    "with base url",
-			baseurl: "http://some.host",
-			expect:  "http://some.host/",
+			name: "with base url",
+			envVars: map[string]string{
+				"BASE_URL": "http://some.host",
+			},
+			expect: "http://some.host/",
 		},
 		{
-			name:    "with base url with slash",
-			baseurl: "http://some.host2/",
-			expect:  "http://some.host2/",
+			name: "with base url with slash",
+			envVars: map[string]string{
+				"BASE_URL": "http://some.host2/",
+			},
+			expect: "http://some.host2/",
 		},
 		{
 			name:    "without base url",
-			baseurl: "",
+			envVars: map[string]string{},
 			expect:  "http://localhost:8080/",
+		},
+		{
+			name: "with server_address",
+			envVars: map[string]string{
+				"SERVER_ADDRESS": "localhost3:1010",
+			},
+			expect: "http://localhost3:1010/",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			resetFlags()
 			unsetEnvVars()
-			if len(test.baseurl) != 0 {
-				t.Setenv("BASE_URL", test.baseurl)
+			if len(test.envVars) != 0 {
+				for k := range test.envVars {
+					t.Setenv(k, test.envVars[k])
+				}
 			}
 			os.Args = []string{"cmd"}
 

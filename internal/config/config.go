@@ -3,6 +3,7 @@
 package config
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"net"
@@ -10,6 +11,14 @@ import (
 	"strings"
 
 	"github.com/caarlos0/env/v6"
+)
+
+var (
+	configTrue    = true
+	configTruePtr = &configTrue
+
+	configFalse    = false
+	configFalsePtr = &configFalse
 )
 
 type config struct {
@@ -26,7 +35,7 @@ type config struct {
 	// Port is the number of port where app will work
 	Port uint64
 	// HTTPS use https
-	HTTPS bool `env:"ENABLE_HTTPS"`
+	HTTPS *bool `env:"ENABLE_HTTPS"`
 }
 
 // newConfig create a new *config
@@ -37,6 +46,7 @@ func newConfig() *config {
 		BaseURL:         "",
 		LogLevel:        "",
 		FileStoragePath: "",
+		HTTPS:           configFalsePtr,
 	}
 }
 
@@ -73,10 +83,10 @@ func (c *config) URL() string {
 		return c.BaseURL
 	}
 	proto := "http"
-	if c.HTTPS {
+	if c.HTTPS != nil && *c.HTTPS {
 		proto = "https"
 	}
-	return fmt.Sprintf("%s://%s:%d/", proto, Config.Host, Config.Port)
+	return fmt.Sprintf("%s://%s:%d/", proto, c.Host, c.Port)
 }
 
 // InitConfig - initialize config
@@ -86,7 +96,18 @@ func (c *config) InitConfig() error {
 	flag.StringVar(&c.LogLevel, "l", "info", "log level")
 	flag.StringVar(&c.FileStoragePath, "f", "", "path to storage file")
 	flag.StringVar(&c.DatabaseDSN, "d", "", "database dsn")
-	flag.BoolVar(&c.HTTPS, "s", false, "enable https")
+	flag.BoolFunc("s", "enable https", func(val string) error {
+		v := strings.ToLower(val)
+		switch v {
+		case "1", "true", "t":
+			c.HTTPS = configTruePtr
+		case "0", "false", "f":
+			c.HTTPS = configFalsePtr
+		default:
+			return errors.New("can not parse bool")
+		}
+		return nil
+	})
 	flag.Parse()
 
 	var envConfig config
@@ -94,6 +115,7 @@ func (c *config) InitConfig() error {
 	if err != nil {
 		return err
 	}
+
 	if envConfig.Host != "" {
 		err := c.Set(envConfig.Host)
 		if err != nil {
@@ -123,7 +145,7 @@ func (c *config) InitConfig() error {
 		c.DatabaseDSN = envConfig.DatabaseDSN
 	}
 
-	if envConfig.HTTPS {
+	if envConfig.HTTPS != nil {
 		c.HTTPS = envConfig.HTTPS
 	}
 

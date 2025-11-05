@@ -29,6 +29,9 @@ import (
 // poolSize кол-во горутин обрабатывающих удаление урлов.
 const poolSize = 10
 
+// WaitSecBeforeShutdown how many seconds wait before force shutdown
+const WaitSecBeforeShutdown = 5 * time.Second
+
 var (
 	buildVersion string
 	buildDate    string
@@ -122,7 +125,7 @@ func run() error {
 	go func() {
 		defer wg.Done()
 		// создаем контекст, который будет отменен при получении сигнала
-		ctxS, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+		ctxS, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 		defer stop()
 
 		select {
@@ -134,7 +137,7 @@ func run() error {
 			logger.Log.Info("stop")
 		}
 
-		ctxT, cancelT := context.WithTimeout(context.Background(), 5*time.Second)
+		ctxT, cancelT := context.WithTimeout(context.Background(), WaitSecBeforeShutdown)
 		defer cancelT()
 		if err := srv.Shutdown(ctxT); err != nil {
 			logger.Log.Info("Server forced to shutdown", zap.Error(err))

@@ -35,21 +35,28 @@ type config struct {
 	// DatabaseDSN - dsn for connect ot database
 	DatabaseDSN string `env:"DATABASE_DSN" json:"database_dsn"`
 	// Port is the number of port where app will work
-	Port uint64
+	Port uint64 `json:"-"`
 	// HTTPS use https
 	HTTPS      *bool  `env:"ENABLE_HTTPS" json:"enable_https"`
-	ConfigPath string `env:"CONFIG"`
+	ConfigPath string `env:"CONFIG" json:"-"`
 }
 
 // newConfig create a new *config
 func newConfig() *config {
-	return &config{
-		Host:            "localhost",
-		Port:            8080,
-		BaseURL:         "",
-		LogLevel:        "info",
-		FileStoragePath: "",
-		HTTPS:           configFalsePtr,
+	c := &config{}
+	c.setDefaults()
+	return c
+}
+
+func (c *config) setDefaults() {
+	if c.Host == "" {
+		c.Host = "localhost"
+	}
+	if c.Port == 0 {
+		c.Port = 8080
+	}
+	if c.LogLevel == "" {
+		c.LogLevel = "info"
 	}
 }
 
@@ -98,7 +105,7 @@ func (c *config) InitConfig() error {
 	flag.StringVar(&c.BaseURL, "b", c.BaseURL, "Like http://ya.ru")
 	flag.StringVar(&c.LogLevel, "l", c.LogLevel, "log level")
 	flag.StringVar(&c.FileStoragePath, "f", c.FileStoragePath, "path to storage file")
-	flag.StringVar(&c.DatabaseDSN, "d", c.FileStoragePath, "database dsn")
+	flag.StringVar(&c.DatabaseDSN, "d", c.DatabaseDSN, "database dsn")
 	flag.BoolFunc("s", "enable https", func(val string) error {
 		v := strings.ToLower(val)
 		switch v {
@@ -170,10 +177,10 @@ func (c *config) InitConfig() error {
 
 func configFromFileWithFlags(c *config) (*config, error) {
 	newconfig, err := getConfigFromFile(c.ConfigPath)
-	newconfig.ConfigPath = c.ConfigPath
 	if err != nil {
 		return nil, err
 	}
+	newconfig.ConfigPath = c.ConfigPath
 	// сбросить переменную окружения CONFIG и флаги -c -config
 	os.Unsetenv("CONFIG")
 	newArgs := make([]string, 0, len(os.Args))
@@ -207,9 +214,12 @@ func getConfigFromFile(path string) (*config, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = configFromFile.Set(configFromFile.Host)
-	if err != nil {
-		return nil, err
+	if configFromFile.Host != "" {
+		err = configFromFile.Set(configFromFile.Host)
+		if err != nil {
+			return nil, err
+		}
 	}
+	configFromFile.setDefaults()
 	return &configFromFile, nil
 }

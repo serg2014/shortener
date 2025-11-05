@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"os"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,11 +26,17 @@ func unsetEnvVars() {
 }
 
 func TestInitConfig(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "config")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
 	tests := []struct {
-		name    string
-		expect  *config
-		envVars map[string]string
-		args    []string
+		name       string
+		expect     *config
+		envVars    map[string]string
+		args       []string
+		configData string
+		configPath string
 	}{
 		{
 			name: "no env. no flag",
@@ -40,7 +47,7 @@ func TestInitConfig(t *testing.T) {
 				LogLevel:        "info",
 				FileStoragePath: "",
 				DatabaseDSN:     "",
-				HTTPS:           configFalsePtr,
+				HTTPS:           nil,
 			},
 			envVars: make(map[string]string),
 			args:    make([]string, 0),
@@ -115,6 +122,62 @@ func TestInitConfig(t *testing.T) {
 				"-s",
 			},
 		},
+		{
+			name: "no env. no flag. flag config",
+			expect: &config{
+				Host:            "localhost2",
+				Port:            8081,
+				BaseURL:         "",
+				LogLevel:        "info",
+				FileStoragePath: "",
+				DatabaseDSN:     "",
+				HTTPS:           nil,
+				ConfigPath:      path.Join(tmpDir, "config1.json"),
+			},
+			envVars:    make(map[string]string),
+			args:       make([]string, 0),
+			configPath: path.Join(tmpDir, "config1.json"),
+			configData: `{"server_address":"localhost2:8081"}`,
+		},
+		{
+			name: "no env. no flag. flag config 2",
+			expect: &config{
+				Host:            "localhost",
+				Port:            8080,
+				BaseURL:         "",
+				LogLevel:        "debug",
+				FileStoragePath: "",
+				DatabaseDSN:     "",
+				HTTPS:           nil,
+				ConfigPath:      path.Join(tmpDir, "config2.json"),
+			},
+			envVars:    make(map[string]string),
+			args:       make([]string, 0),
+			configPath: path.Join(tmpDir, "config2.json"),
+			configData: `{"log_level":"debug"}`,
+		},
+		{
+			name: "env. flag. flag config 3",
+			expect: &config{
+				Host:            "localhost3",
+				Port:            1010,
+				BaseURL:         "",
+				LogLevel:        "debug",
+				FileStoragePath: "",
+				DatabaseDSN:     "",
+				HTTPS:           configFalsePtr,
+				ConfigPath:      path.Join(tmpDir, "config3.json"),
+			},
+			envVars: map[string]string{
+				"SERVER_ADDRESS": "localhost3:1010",
+			},
+			args: []string{
+				"-a=localhost1:9090",
+				"-s=0",
+			},
+			configPath: path.Join(tmpDir, "config3.json"),
+			configData: `{"log_level":"debug","server_address":"localhost2:8081","enable_https":true}`,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -126,6 +189,11 @@ func TestInitConfig(t *testing.T) {
 				for k := range test.envVars {
 					t.Setenv(k, test.envVars[k])
 				}
+			}
+			if len(test.configData) != 0 {
+				err = os.WriteFile(test.configPath, []byte(test.configData), 0600)
+				require.NoError(t, err)
+				test.args = append(test.args, "-config", test.configPath)
 			}
 			// Установка аргументов командной строки
 			os.Args = append([]string{"cmd"}, test.args...)
@@ -186,6 +254,41 @@ func TestURL(t *testing.T) {
 			err := conf.InitConfig()
 			require.NoError(t, err)
 			assert.Equal(t, test.expect, conf.URL())
+		})
+	}
+}
+
+func Test_getConfigFromFile(t *testing.T) {
+	tests := []struct {
+		name   string
+		data   string
+		expect config
+	}{
+		{
+			name: "do not use Port and ConfigPath from json",
+			data: `{"server_address":"localhost2:8081","base_url": "https://localhost", "log_level": "debug", "Port": 90, "enable_https": true, "ConfigPath":"test"}`,
+			expect: config{
+				Host:       "localhost2",
+				Port:       8081,
+				BaseURL:    "https://localhost",
+				LogLevel:   "debug",
+				HTTPS:      configTruePtr,
+				ConfigPath: "",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tmpDir, err := os.MkdirTemp("", "config")
+			require.NoError(t, err)
+			defer os.RemoveAll(tmpDir)
+
+			path := path.Join(tmpDir, "config.json")
+			err = os.WriteFile(path, []byte(test.data), 0600)
+			require.NoError(t, err)
+			conf, err := getConfigFromFile(path)
+			require.NoError(t, err)
+			assert.Equal(t, test.expect, *conf)
 		})
 	}
 }

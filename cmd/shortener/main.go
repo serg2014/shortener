@@ -29,8 +29,8 @@ import (
 // poolSize кол-во горутин обрабатывающих удаление урлов.
 const poolSize = 10
 
-// WaitSecBeforeShutdown how many seconds wait before force shutdown
-const WaitSecBeforeShutdown = 5 * time.Second
+// waitSecBeforeShutdown how many seconds wait before force shutdown
+const waitSecBeforeShutdown = 5 * time.Second
 
 var (
 	buildVersion string
@@ -137,7 +137,7 @@ func run() error {
 			logger.Log.Info("stop")
 		}
 
-		ctxT, cancelT := context.WithTimeout(context.Background(), WaitSecBeforeShutdown)
+		ctxT, cancelT := context.WithTimeout(context.Background(), waitSecBeforeShutdown)
 		defer cancelT()
 		if err := srv.Shutdown(ctxT); err != nil {
 			logger.Log.Info("Server forced to shutdown", zap.Error(err))
@@ -149,27 +149,9 @@ func run() error {
 		zap.String("storage", fmt.Sprintf("%T", store)),
 		zap.Boolp("https", config.Config.HTTPS),
 	)
-	// http
-	var lError error
-	if config.Config.HTTPS == nil || !*config.Config.HTTPS {
-		lError = srv.ListenAndServe()
-	} else {
-		tmpDir, err := createCertTmpDir()
-		if err != nil {
-			return err
-		}
-		cert, pk, err := getCertPK(tmpDir)
-		if err != nil {
-			logger.Log.Error("tls error", zap.Error(err))
-			return err
-		}
-		logger.Log.Info("Paths", zap.String("cert path", cert), zap.String("pk path", pk))
-		defer deleteCertTmpDir(tmpDir)
-
-		lError = srv.ListenAndServeTLS(cert, pk)
-	}
-	if lError != nil && !errors.Is(lError, http.ErrServerClosed) {
-		logger.Log.Panic("error in ListenAndServe", zap.Error(lError))
+	err = ListenAndServe(&srv, config.Config.HTTPS)
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Log.Panic("error in ListenAndServe", zap.Error(err))
 	}
 
 	// отменяем контекст, чтобы завершить горутины
@@ -178,4 +160,21 @@ func run() error {
 	wg.Wait()
 	logger.Log.Info("Server is shutdown")
 	return nil
+}
+
+// ListenAndServe - srv.ListenAndServe or srv.ListenAndServeTLS
+func ListenAndServe(srv *http.Server, isHTTPS *bool) error {
+	// http
+	if isHTTPS == nil || !*isHTTPS {
+		return srv.ListenAndServe()
+	}
+	// https
+	cert, pk, callback, err := getCertPK()
+	if err != nil {
+		return err
+	}
+	defer callback()
+	logger.Log.Info("Paths", zap.String("cert path", cert), zap.String("pk path", pk))
+
+	return srv.ListenAndServeTLS(cert, pk)
 }

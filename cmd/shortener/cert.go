@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"net"
 	"os"
@@ -32,8 +33,8 @@ func deleteCertTmpDir(dirPath string) error {
 	return nil
 }
 
-// getCertPK create certificate file anf private key file in the dir dirPath
-func getCertPK(dirPath string) (string, string, error) {
+// makeCertPK create certificate file and private key file in the dir dirPath
+func makeCertPK(dirPath string) (string, string, error) {
 	// создаём шаблон сертификата
 	cert := &x509.Certificate{
 		// указываем уникальный номер сертификата
@@ -95,4 +96,18 @@ func getCertPK(dirPath string) (string, string, error) {
 		return "", "", err
 	}
 	return certPath, pkPath, nil
+}
+
+// getCertPK return path to certificate file and private key
+func getCertPK() (string, string, func() error, error) {
+	tmpDir, err := createCertTmpDir()
+	if err != nil {
+		return "", "", nil, fmt.Errorf("can not create tmp dir: %w", err)
+	}
+	cert, pk, err := makeCertPK(tmpDir)
+	if err != nil {
+		return "", "", nil, fmt.Errorf("tls error: %w", err)
+	}
+	fn := func() error { return deleteCertTmpDir(tmpDir) }
+	return cert, pk, fn, nil
 }

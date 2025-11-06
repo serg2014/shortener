@@ -205,12 +205,11 @@ func configFromFileWithFlags(c *config) (*config, error) {
 func getConfigFromFile(path string) (*config, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can not open %s: %w", path, err)
 	}
 
 	var configFromFile config
-	dec := json.NewDecoder(f)
-	err = dec.Decode(&configFromFile)
+	err = json.NewDecoder(f).Decode(&configFromFile)
 	if err != nil {
 		return nil, err
 	}

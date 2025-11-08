@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -22,6 +23,28 @@ var (
 	configFalse    = false
 	configFalsePtr = &configFalse
 )
+
+var (
+	ErrParseCIDR = errors.New("bad trusted subnet")
+)
+
+type TrustedSubnet net.IPNet
+
+func (t *TrustedSubnet) UnmarshalJSON(data []byte) error {
+	var s string
+	err := json.Unmarshal(data, &s)
+	if err != nil {
+		return err
+	}
+
+	// TODO copy paste
+	_, net, err := net.ParseCIDR(s)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrParseCIDR, err)
+	}
+	*t = TrustedSubnet(*net)
+	return nil
+}
 
 type config struct {
 	// Host is hostname where app will work
@@ -37,8 +60,9 @@ type config struct {
 	// Port is the number of port where app will work
 	Port uint64 `json:"-"`
 	// HTTPS use https
-	HTTPS      *bool  `env:"ENABLE_HTTPS" json:"enable_https"`
-	ConfigPath string `env:"CONFIG" json:"-"`
+	HTTPS         *bool          `env:"ENABLE_HTTPS" json:"enable_https"`
+	ConfigPath    string         `env:"CONFIG" json:"-"`
+	TrustedSubnet *TrustedSubnet `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
 }
 
 // newConfig create a new *config
@@ -120,12 +144,31 @@ func (c *config) InitConfig() error {
 	})
 	flag.StringVar(&c.ConfigPath, "c", "", "config path")
 	flag.StringVar(&c.ConfigPath, "config", "", "config path")
+	flag.Func("t", "trusted subnet (192.168.1.0/24)", func(val string) error {
+		_, net, err := net.ParseCIDR(val)
+		if err != nil {
+			return fmt.Errorf("%w: %w", ErrParseCIDR, err)
+		}
+		tnet := TrustedSubnet(*net)
+		c.TrustedSubnet = &tnet
+		return nil
+	})
 	flag.Parse()
 
 	var envConfig config
-	err := env.Parse(&envConfig)
+	//err := env.Parse(&envConfig)
+	err := env.ParseWithFuncs(&envConfig, map[reflect.Type]env.ParserFunc{
+		reflect.TypeOf(TrustedSubnet{}): func(val string) (any, error) {
+			// TODO copy paste
+			_, net, err := net.ParseCIDR(val)
+			if err != nil {
+				return nil, fmt.Errorf("%w: %w", ErrParseCIDR, err)
+			}
+			return TrustedSubnet(*net), nil
+		},
+	})
 	if err != nil {
-		return err
+		return fmt.Errorf("bad env: %w", err)
 	}
 
 	if envConfig.Host != "" {
@@ -163,6 +206,10 @@ func (c *config) InitConfig() error {
 
 	if envConfig.ConfigPath != "" {
 		c.ConfigPath = envConfig.ConfigPath
+	}
+
+	if envConfig.TrustedSubnet != nil {
+		c.TrustedSubnet = envConfig.TrustedSubnet
 	}
 
 	if c.ConfigPath != "" {

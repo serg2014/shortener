@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"net"
 	"os"
 	"path"
 	"testing"
@@ -37,6 +38,7 @@ func TestInitConfig(t *testing.T) {
 		args       []string
 		configData string
 		configPath string
+		err        error
 	}{
 		{
 			name: "no env. no flag",
@@ -62,6 +64,10 @@ func TestInitConfig(t *testing.T) {
 				FileStoragePath: "/file/path",
 				DatabaseDSN:     "dsn",
 				HTTPS:           configTruePtr,
+				TrustedSubnet: &TrustedSubnet{
+					IP:   net.IP([]byte{0xc0, 0xa8, 0x01, 0x0}),
+					Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
+				},
 			},
 			envVars: map[string]string{
 				"SERVER_ADDRESS":    "localhost2:9090",
@@ -70,6 +76,7 @@ func TestInitConfig(t *testing.T) {
 				"FILE_STORAGE_PATH": "/file/path",
 				"DATABASE_DSN":      "dsn",
 				"ENABLE_HTTPS":      "true",
+				"TRUSTED_SUBNET":    "192.168.1.0/24",
 			},
 			args: make([]string, 0),
 		},
@@ -83,6 +90,10 @@ func TestInitConfig(t *testing.T) {
 				FileStoragePath: "/file/path",
 				DatabaseDSN:     "dsn",
 				HTTPS:           configTruePtr,
+				TrustedSubnet: &TrustedSubnet{
+					IP:   net.IP([]byte{0x7f, 0x0, 0x0, 0x0}),
+					Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
+				},
 			},
 			envVars: make(map[string]string),
 			args: []string{
@@ -92,6 +103,7 @@ func TestInitConfig(t *testing.T) {
 				"-f=/file/path",
 				"-d=dsn",
 				"-s",
+				"-t=127.0.0.1/24",
 			},
 		},
 		{
@@ -104,6 +116,10 @@ func TestInitConfig(t *testing.T) {
 				FileStoragePath: "/path/file",
 				DatabaseDSN:     "dsn-env",
 				HTTPS:           configFalsePtr,
+				TrustedSubnet: &TrustedSubnet{
+					IP:   net.IP([]byte{0xc0, 0xa8, 0x01, 0x0}),
+					Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
+				},
 			},
 			envVars: map[string]string{
 				"SERVER_ADDRESS":    "localhost3:1010",
@@ -112,6 +128,7 @@ func TestInitConfig(t *testing.T) {
 				"FILE_STORAGE_PATH": "/path/file",
 				"DATABASE_DSN":      "dsn-env",
 				"ENABLE_HTTPS":      "false",
+				"TRUSTED_SUBNET":    "192.168.1.0/24",
 			},
 			args: []string{
 				"-a=localhost2:9090",
@@ -120,6 +137,7 @@ func TestInitConfig(t *testing.T) {
 				"-f=/file/path",
 				"-d=dsn",
 				"-s",
+				"-t=127.0.0.1/24",
 			},
 		},
 		{
@@ -133,11 +151,15 @@ func TestInitConfig(t *testing.T) {
 				DatabaseDSN:     "",
 				HTTPS:           nil,
 				ConfigPath:      path.Join(tmpDir, "config1.json"),
+				TrustedSubnet: &TrustedSubnet{
+					IP:   net.IP([]byte{0xc0, 0x0, 0x0, 0x0}),
+					Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
+				},
 			},
 			envVars:    make(map[string]string),
 			args:       make([]string, 0),
 			configPath: path.Join(tmpDir, "config1.json"),
-			configData: `{"server_address":"localhost2:8081"}`,
+			configData: `{"server_address":"localhost2:8081", "trusted_subnet":"192.0.0.0/24"}`,
 		},
 		{
 			name: "no env. no flag. flag config 2",
@@ -167,6 +189,10 @@ func TestInitConfig(t *testing.T) {
 				DatabaseDSN:     "",
 				HTTPS:           configFalsePtr,
 				ConfigPath:      path.Join(tmpDir, "config3.json"),
+				TrustedSubnet: &TrustedSubnet{
+					IP:   net.IP([]byte{0x7f, 0x0, 0x0, 0x0}),
+					Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
+				},
 			},
 			envVars: map[string]string{
 				"SERVER_ADDRESS": "localhost3:1010",
@@ -174,9 +200,10 @@ func TestInitConfig(t *testing.T) {
 			args: []string{
 				"-a=localhost1:9090",
 				"-s=0",
+				"-t=127.0.0.1/24",
 			},
 			configPath: path.Join(tmpDir, "config3.json"),
-			configData: `{"log_level":"debug","server_address":"localhost2:8081","enable_https":true}`,
+			configData: `{"log_level":"debug","server_address":"localhost2:8081","enable_https":true,"trusted_subnet":"192.0.0.0/24"}`,
 		},
 	}
 	for _, test := range tests {
@@ -200,7 +227,11 @@ func TestInitConfig(t *testing.T) {
 
 			conf := newConfig()
 			err := conf.InitConfig()
-			require.NoError(t, err)
+			if test.err == nil {
+				require.NoError(t, err)
+			} else {
+				require.ErrorIs(t, err, test.err)
+			}
 			assert.Equal(t, test.expect, conf)
 		})
 	}

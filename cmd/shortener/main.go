@@ -73,6 +73,7 @@ func Router(a *app.MyApp) chi.Router {
 		r.Use(gzipMiddleware(pool))
 
 		r.Group(func(r chi.Router) {
+			r.Use(TrustedNetsMiddleware)
 			r.Get("/api/internal/stats", handlers.InternalStats(a))
 
 		})

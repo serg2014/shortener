@@ -110,7 +110,10 @@ func run() error {
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	defer func() {
+		cancel()
+		wg.Wait()
+	}()
 
 	for i := 0; i < poolSize; i++ {
 		wg.Add(1)
@@ -144,14 +147,14 @@ func run() error {
 		}
 	}()
 
-	logger.Log.Info("Running server",
+	logger.Log.Info("Try running server",
 		zap.String("address", config.Config.String()),
 		zap.String("storage", fmt.Sprintf("%T", store)),
 		zap.Boolp("https", config.Config.HTTPS),
 	)
 	err = ListenAndServe(&srv, config.Config.HTTPS)
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		logger.Log.Panic("error in ListenAndServe", zap.Error(err))
+		return fmt.Errorf("ListenAndServe: %w", err)
 	}
 
 	// отменяем контекст, чтобы завершить горутины

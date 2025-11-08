@@ -104,7 +104,7 @@ func run() error {
 	app := app.NewApp(store, nil)
 
 	srv := http.Server{
-		Addr:    fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port),
+		Addr:    config.Config.ServerAddress.String(),
 		Handler: Router(app),
 	}
 
@@ -148,7 +148,7 @@ func run() error {
 	}()
 
 	logger.Log.Info("Try running server",
-		zap.String("address", config.Config.String()),
+		zap.String("address", config.Config.ServerAddress.String()),
 		zap.String("storage", fmt.Sprintf("%T", store)),
 		zap.Boolp("https", config.Config.HTTPS),
 	)

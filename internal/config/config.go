@@ -17,38 +17,89 @@ import (
 )
 
 var (
-	configTrue    = true
-	configTruePtr = &configTrue
-
-	configFalse    = false
-	configFalsePtr = &configFalse
-)
-
-var (
 	ErrParseCIDR = errors.New("bad trusted subnet")
 )
 
+// TrustedSubnet own type net.IPNet
 type TrustedSubnet net.IPNet
 
-func (t *TrustedSubnet) UnmarshalJSON(data []byte) error {
+// String flag.Value interface for type TrustedSubnet
+func (tsn *TrustedSubnet) String() string {
+	n := (*net.IPNet)(tsn)
+	return n.String()
+}
+
+// Set flag.Value interface for type TrustedSubnet
+func (tsn *TrustedSubnet) Set(val string) error {
+	_, net, err := net.ParseCIDR(val)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrParseCIDR, err)
+	}
+	*tsn = (TrustedSubnet)(*net)
+	return nil
+}
+
+// UnmarshalJSON for TrustedSubnet
+func (tsn *TrustedSubnet) UnmarshalJSON(data []byte) error {
 	var s string
 	err := json.Unmarshal(data, &s)
 	if err != nil {
 		return err
 	}
 
-	// TODO copy paste
-	_, net, err := net.ParseCIDR(s)
+	return tsn.Set(s)
+}
+
+// ServerAddress host and port
+type ServerAddress struct {
+	// Host is hostname where app will work
+	Host string `json:"-"`
+	// Port is the number of port where app will work
+	Port uint64 `json:"-"`
+}
+
+// String flag.Value interface for type ServerAddress
+func (sa *ServerAddress) String() string {
+	return fmt.Sprintf("%s:%d", sa.Host, sa.Port)
+}
+
+// Set flag.Value interface for type ServerAddress
+func (sa *ServerAddress) Set(flagValue string) error {
+	host, portStr, err := net.SplitHostPort(flagValue)
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrParseCIDR, err)
+		return err
 	}
-	*t = TrustedSubnet(*net)
+
+	port, err := strconv.ParseUint(portStr, 10, 32)
+	if err != nil {
+		return err
+	}
+	sa.Host = host
+	// TODO is it really need?
+	if sa.Host == "" {
+		sa.Host = "localhost"
+	}
+	sa.Port = port
+	return nil
+}
+
+// UnmarshalJSON for ServerAddress
+func (sa *ServerAddress) UnmarshalJSON(data []byte) error {
+	var s string
+	err := json.Unmarshal(data, &s)
+	if err != nil {
+		return err
+	}
+	err = sa.Set(s)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 type config struct {
-	// Host is hostname where app will work
-	Host string `env:"SERVER_ADDRESS" json:"server_address"`
+	// ServerAddress is hostname where app will work
+	ServerAddress ServerAddress `env:"SERVER_ADDRESS" json:"server_address"`
 	// BaseURL - external hostname of the app
 	BaseURL string `env:"BASE_URL" json:"base_url"`
 	// LogLevel - logging level
@@ -58,11 +109,11 @@ type config struct {
 	// DatabaseDSN - dsn for connect ot database
 	DatabaseDSN string `env:"DATABASE_DSN" json:"database_dsn"`
 	// Port is the number of port where app will work
-	Port uint64 `json:"-"`
+	// Port uint64 `json:"-"`
 	// HTTPS use https
-	HTTPS         *bool          `env:"ENABLE_HTTPS" json:"enable_https"`
-	ConfigPath    string         `env:"CONFIG" json:"-"`
-	TrustedSubnet *TrustedSubnet `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
+	HTTPS         *bool         `env:"ENABLE_HTTPS" json:"enable_https"`
+	ConfigPath    string        `env:"CONFIG" json:"-"`
+	TrustedSubnet TrustedSubnet `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
 }
 
 // newConfig create a new *config
@@ -73,11 +124,11 @@ func newConfig() *config {
 }
 
 func (c *config) setDefaults() {
-	if c.Host == "" {
-		c.Host = "localhost"
+	if c.ServerAddress.Host == "" {
+		c.ServerAddress.Host = "localhost"
 	}
-	if c.Port == 0 {
-		c.Port = 8080
+	if c.ServerAddress.Port == 0 {
+		c.ServerAddress.Port = 8080
 	}
 	if c.LogLevel == "" {
 		c.LogLevel = "info"
@@ -86,30 +137,6 @@ func (c *config) setDefaults() {
 
 // Config global var. use it as singleton
 var Config = newConfig()
-
-// String flag.Value interface
-func (c *config) String() string {
-	return fmt.Sprintf("%s:%d", c.Host, c.Port)
-}
-
-// Set flag.Value interface
-func (c *config) Set(flagValue string) error {
-	host, portStr, err := net.SplitHostPort(flagValue)
-	if err != nil {
-		return err
-	}
-
-	port, err := strconv.ParseUint(portStr, 10, 32)
-	if err != nil {
-		return err
-	}
-	c.Host = host
-	if c.Host == "" {
-		c.Host = "localhost"
-	}
-	c.Port = port
-	return nil
-}
 
 // URL - return BaseURL(if set) or default value.
 func (c *config) URL() string {
@@ -120,12 +147,12 @@ func (c *config) URL() string {
 	if c.HTTPS != nil && *c.HTTPS {
 		proto = "https"
 	}
-	return fmt.Sprintf("%s://%s:%d/", proto, c.Host, c.Port)
+	return fmt.Sprintf("%s://%s:%d/", proto, c.ServerAddress.Host, c.ServerAddress.Port)
 }
 
 // InitConfig - initialize config
 func (c *config) InitConfig() error {
-	flag.Var(c, "a", "Net address host:port")
+	flag.Var(&c.ServerAddress, "a", "Net address host:port")
 	flag.StringVar(&c.BaseURL, "b", c.BaseURL, "Like http://ya.ru")
 	flag.StringVar(&c.LogLevel, "l", c.LogLevel, "log level")
 	flag.StringVar(&c.FileStoragePath, "f", c.FileStoragePath, "path to storage file")
@@ -134,9 +161,11 @@ func (c *config) InitConfig() error {
 		v := strings.ToLower(val)
 		switch v {
 		case "1", "true", "t":
-			c.HTTPS = configTruePtr
+			t := true
+			c.HTTPS = &t
 		case "0", "false", "f":
-			c.HTTPS = configFalsePtr
+			f := false
+			c.HTTPS = &f
 		default:
 			return errors.New("can not parse bool")
 		}
@@ -144,72 +173,43 @@ func (c *config) InitConfig() error {
 	})
 	flag.StringVar(&c.ConfigPath, "c", "", "config path")
 	flag.StringVar(&c.ConfigPath, "config", "", "config path")
-	flag.Func("t", "trusted subnet (192.168.1.0/24)", func(val string) error {
-		_, net, err := net.ParseCIDR(val)
-		if err != nil {
-			return fmt.Errorf("%w: %w", ErrParseCIDR, err)
-		}
-		tnet := TrustedSubnet(*net)
-		c.TrustedSubnet = &tnet
-		return nil
-	})
+	flag.Var(&c.TrustedSubnet, "t", "trusted subnet like (192.168.1.0/24)")
 	flag.Parse()
 
-	var envConfig config
-	//err := env.Parse(&envConfig)
-	err := env.ParseWithFuncs(&envConfig, map[reflect.Type]env.ParserFunc{
-		reflect.TypeOf(TrustedSubnet{}): func(val string) (any, error) {
-			// TODO copy paste
-			_, net, err := net.ParseCIDR(val)
-			if err != nil {
-				return nil, fmt.Errorf("%w: %w", ErrParseCIDR, err)
-			}
-			return TrustedSubnet(*net), nil
+	err := env.ParseWithFuncs(
+		c,
+		map[reflect.Type]env.ParserFunc{
+			reflect.TypeOf(TrustedSubnet{}): func(val string) (any, error) {
+				tsn := TrustedSubnet{}
+				err := tsn.Set(val)
+				if err != nil {
+					return tsn, fmt.Errorf("%w: %w", ErrParseCIDR, err)
+				}
+				return tsn, nil
+			},
+			reflect.TypeOf(ServerAddress{}): func(val string) (any, error) {
+				sa := ServerAddress{}
+				err := sa.Set(val)
+				if err != nil {
+					return nil, err
+				}
+				return sa, nil
+			},
 		},
-	})
+		// env.Options{
+		// 	OnSet: func(tag string, value interface{}, isDefault bool) {
+		// 		fmt.Printf("Set %s to %v (default? %v)\n", tag, value, isDefault)
+		// 	},
+		// },
+	)
 	if err != nil {
 		return fmt.Errorf("bad env: %w", err)
-	}
-
-	if envConfig.Host != "" {
-		err := c.Set(envConfig.Host)
-		if err != nil {
-			return err
-		}
-	}
-
-	if envConfig.BaseURL != "" {
-		c.BaseURL = envConfig.BaseURL
 	}
 
 	if c.BaseURL != "" {
 		if !strings.HasSuffix(c.BaseURL, "/") {
 			c.BaseURL = c.BaseURL + "/"
 		}
-	}
-
-	if envConfig.LogLevel != "" {
-		c.LogLevel = envConfig.LogLevel
-	}
-
-	if envConfig.FileStoragePath != "" {
-		c.FileStoragePath = envConfig.FileStoragePath
-	}
-
-	if envConfig.DatabaseDSN != "" {
-		c.DatabaseDSN = envConfig.DatabaseDSN
-	}
-
-	if envConfig.HTTPS != nil {
-		c.HTTPS = envConfig.HTTPS
-	}
-
-	if envConfig.ConfigPath != "" {
-		c.ConfigPath = envConfig.ConfigPath
-	}
-
-	if envConfig.TrustedSubnet != nil {
-		c.TrustedSubnet = envConfig.TrustedSubnet
 	}
 
 	if c.ConfigPath != "" {
@@ -260,12 +260,7 @@ func getConfigFromFile(path string) (*config, error) {
 	if err != nil {
 		return nil, err
 	}
-	if configFromFile.Host != "" {
-		err = configFromFile.Set(configFromFile.Host)
-		if err != nil {
-			return nil, err
-		}
-	}
+
 	configFromFile.setDefaults()
 	return &configFromFile, nil
 }

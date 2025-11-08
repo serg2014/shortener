@@ -150,7 +150,7 @@ func run() error {
 	logger.Log.Info("Try running server",
 		zap.String("address", config.Config.ServerAddress.String()),
 		zap.String("storage", fmt.Sprintf("%T", store)),
-		zap.Boolp("https", config.Config.HTTPS),
+		zap.Bool("https", config.Config.HTTPS),
 	)
 	err = ListenAndServe(&srv, config.Config.HTTPS)
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -166,9 +166,9 @@ func run() error {
 }
 
 // ListenAndServe - srv.ListenAndServe or srv.ListenAndServeTLS
-func ListenAndServe(srv *http.Server, isHTTPS *bool) error {
+func ListenAndServe(srv *http.Server, isHTTPS bool) error {
 	// http
-	if isHTTPS == nil || !*isHTTPS {
+	if !isHTTPS {
 		return srv.ListenAndServe()
 	}
 	// https

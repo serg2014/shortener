@@ -108,11 +108,11 @@ type config struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH" json:"file_storage_path"`
 	// DatabaseDSN - dsn for connect ot database
 	DatabaseDSN string `env:"DATABASE_DSN" json:"database_dsn"`
-	// Port is the number of port where app will work
-	// Port uint64 `json:"-"`
 	// HTTPS use https
-	HTTPS         *bool         `env:"ENABLE_HTTPS" json:"enable_https"`
-	ConfigPath    string        `env:"CONFIG" json:"-"`
+	HTTPS bool `env:"ENABLE_HTTPS" json:"enable_https"`
+	// ConfigPath path to the config file json
+	ConfigPath string `env:"CONFIG" json:"-"`
+	// TrustedSubnet subnet for internal usage
 	TrustedSubnet TrustedSubnet `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
 }
 
@@ -144,7 +144,7 @@ func (c *config) URL() string {
 		return c.BaseURL
 	}
 	proto := "http"
-	if c.HTTPS != nil && *c.HTTPS {
+	if c.HTTPS {
 		proto = "https"
 	}
 	return fmt.Sprintf("%s://%s:%d/", proto, c.ServerAddress.Host, c.ServerAddress.Port)
@@ -157,20 +157,7 @@ func (c *config) InitConfig() error {
 	flag.StringVar(&c.LogLevel, "l", c.LogLevel, "log level")
 	flag.StringVar(&c.FileStoragePath, "f", c.FileStoragePath, "path to storage file")
 	flag.StringVar(&c.DatabaseDSN, "d", c.DatabaseDSN, "database dsn")
-	flag.BoolFunc("s", "enable https", func(val string) error {
-		v := strings.ToLower(val)
-		switch v {
-		case "1", "true", "t":
-			t := true
-			c.HTTPS = &t
-		case "0", "false", "f":
-			f := false
-			c.HTTPS = &f
-		default:
-			return errors.New("can not parse bool")
-		}
-		return nil
-	})
+	flag.BoolVar(&c.HTTPS, "s", c.HTTPS, "enable https")
 	flag.StringVar(&c.ConfigPath, "c", "", "config path")
 	flag.StringVar(&c.ConfigPath, "config", "", "config path")
 	flag.Var(&c.TrustedSubnet, "t", "trusted subnet like (192.168.1.0/24)")
@@ -196,11 +183,6 @@ func (c *config) InitConfig() error {
 				return sa, nil
 			},
 		},
-		// env.Options{
-		// 	OnSet: func(tag string, value interface{}, isDefault bool) {
-		// 		fmt.Printf("Set %s to %v (default? %v)\n", tag, value, isDefault)
-		// 	},
-		// },
 	)
 	if err != nil {
 		return fmt.Errorf("bad env: %w", err)

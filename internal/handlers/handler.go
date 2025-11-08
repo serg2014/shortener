@@ -251,3 +251,25 @@ func DeleteUserURLS(a *app.MyApp) http.HandlerFunc {
 		w.WriteHeader(http.StatusAccepted)
 	}
 }
+
+// InternalStats show servers stats for trusted users
+func InternalStats(a *app.MyApp) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data, err := a.InternalStats(r.Context())
+		if err != nil {
+			logger.Log.Error("InternalStats", zap.Error(err))
+			code := http.StatusInternalServerError
+			http.Error(w, http.StatusText(code), code)
+			return
+		}
+
+		// порядок важен
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		// сериализуем ответ сервера
+		if err := json.NewEncoder(w).Encode(data); err != nil {
+			logger.Log.Error("error encoding response", zap.Error(err))
+			return
+		}
+	}
+}

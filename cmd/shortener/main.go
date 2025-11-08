@@ -70,16 +70,23 @@ func Router(a *app.MyApp) chi.Router {
 
 	r.Route("/", func(r chi.Router) {
 		r.Use(logger.WithLogging)
-		r.Use(auth.AuthMiddleware)
 		r.Use(gzipMiddleware(pool))
 
-		r.Post("/", handlers.CreateURL(a))
-		r.Get("/{key}", handlers.GetURL(a))
-		r.Post("/api/shorten", handlers.CreateURLJson(a))
-		r.Get("/ping", handlers.Ping(a))
-		r.Post("/api/shorten/batch", handlers.CreateURLBatch(a))
-		r.Get("/api/user/urls", handlers.GetUserURLS(a))
-		r.Delete("/api/user/urls", handlers.DeleteUserURLS(a))
+		r.Group(func(r chi.Router) {
+			r.Get("/api/internal/stats", handlers.InternalStats(a))
+
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(auth.AuthMiddleware)
+
+			r.Post("/", handlers.CreateURL(a))
+			r.Get("/{key}", handlers.GetURL(a))
+			r.Post("/api/shorten", handlers.CreateURLJson(a))
+			r.Get("/ping", handlers.Ping(a))
+			r.Post("/api/shorten/batch", handlers.CreateURLBatch(a))
+			r.Get("/api/user/urls", handlers.GetUserURLS(a))
+			r.Delete("/api/user/urls", handlers.DeleteUserURLS(a))
+		})
 	})
 	return r
 }

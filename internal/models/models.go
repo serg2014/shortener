@@ -41,4 +41,9 @@ type ResponseUser []ResponseUserItem
 // RequestForDeleteURLS type for delete urls
 type RequestForDeleteURLS []string
 
+type InternalStats struct {
+	Urls  uint `json:"urls"`
+	Users uint `json:"users"`
+}
+
 // TODO добавить тесты

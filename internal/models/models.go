@@ -41,6 +41,7 @@ type ResponseUser []ResponseUserItem
 // RequestForDeleteURLS type for delete urls
 type RequestForDeleteURLS []string
 
+// InternalStats type for handler InternalStats
 type InternalStats struct {
 	Urls  uint `json:"urls"`
 	Users uint `json:"users"`

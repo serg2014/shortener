@@ -134,6 +134,7 @@ func (s *storage) DeleteUserURLS(ctx context.Context, req models.RequestForDelet
 	return nil
 }
 
+// InternalStats get stat
 func (s *storage) InternalStats(ctx context.Context) (*models.InternalStats, error) {
 	s.m.RLock()
 	defer s.m.RUnlock()

@@ -7,9 +7,8 @@ import (
 	"net"
 )
 
-var (
-	ErrParseCIDR = errors.New("bad trusted subnet")
-)
+// ErrParseCIDR error for parse error
+var ErrParseCIDR = errors.New("bad trusted subnet")
 
 // TrustedSubnet own type net.IPNet
 type TrustedSubnet struct {

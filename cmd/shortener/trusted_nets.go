@@ -6,6 +6,7 @@ import (
 	"github.com/serg2014/shortener/internal/config"
 )
 
+// TrustedNetsMiddleware middleware for checking request from trusted net
 func TrustedNetsMiddleware(trustedNet config.TrustedSubnet) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

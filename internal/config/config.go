@@ -18,9 +18,9 @@ import (
 // ServerAddress host and port
 type ServerAddress struct {
 	// Host is hostname where app will work
-	Host string `json:"-"`
+	Host string `env:"-" json:"-"`
 	// Port is the number of port where app will work
-	Port uint64 `json:"-"`
+	Port uint64 `env:"-" json:"-"`
 }
 
 // String flag.Value interface for type ServerAddress
@@ -76,7 +76,7 @@ type config struct {
 	// HTTPS use https
 	HTTPS bool `env:"ENABLE_HTTPS" json:"enable_https"`
 	// ConfigPath path to the config file json
-	ConfigPath string `env:"CONFIG" json:"-"`
+	ConfigPath string `env:"CONFIG,unset" json:"-"`
 	// TrustedSubnet subnet for internal usage
 	TrustedSubnet TrustedSubnet `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
 }
@@ -178,7 +178,7 @@ func configFromFileWithFlags(c *config) (*config, error) {
 	}
 	newconfig.ConfigPath = c.ConfigPath
 	// сбросить переменную окружения CONFIG и флаги -c -config
-	os.Unsetenv("CONFIG")
+	// переменную окружения CONFIG сбрасывает пакет env тегом ,unset
 	newArgs := make([]string, 0, len(os.Args))
 	for i := 0; i < len(os.Args); i++ {
 		if os.Args[i] == "-c" || os.Args[i] == "-config" {

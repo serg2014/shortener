@@ -13,7 +13,7 @@ var (
 
 // TrustedSubnet own type net.IPNet
 type TrustedSubnet struct {
-	Data *net.IPNet
+	Data *net.IPNet `env:"-" json:"-"`
 }
 
 // String flag.Value interface for type TrustedSubnet

@@ -24,28 +24,19 @@ func resetFlags() {
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 }
 
-// Очистка переменных окружения
-func unsetEnvVars() {
-	os.Unsetenv("SERVER_ADDRESS")
-	os.Unsetenv("BASE_URL")
-	os.Unsetenv("LOG_LEVEL")
-	os.Unsetenv("FILE_STORAGE_PATH")
-	os.Unsetenv("DATABASE_DSN")
-	os.Unsetenv("ENABLE_HTTPS")
-}
-
 func TestInitConfig(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "config")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
 	tests := []struct {
-		name       string
-		expect     *config
-		envVars    map[string]string
-		args       []string
-		configData string
-		configPath string
+		name          string
+		expect        *config
+		envVars       map[string]string
+		args          []string
+		configData    string
+		configDataEnv string
+		configPath    string
 	}{
 		{
 			name: "no env. no flag",
@@ -230,6 +221,9 @@ func TestInitConfig(t *testing.T) {
 			},
 			envVars: map[string]string{
 				"SERVER_ADDRESS": "localhost3:1010",
+				"HOST":           "fake_host",
+				"PORT":           "9999",
+				"-":              "9999",
 			},
 			args: []string{
 				"-a=localhost1:9090",
@@ -239,22 +233,63 @@ func TestInitConfig(t *testing.T) {
 			configPath: path.Join(tmpDir, "config3.json"),
 			configData: `{"log_level":"debug","server_address":"localhost2:8081","enable_https":true,"trusted_subnet":"192.0.0.0/24"}`,
 		},
+		{
+			name: "env. flag. env config",
+			expect: &config{
+				ServerAddress: ServerAddress{
+					Host: "localhost3",
+					Port: 1010,
+				},
+				BaseURL:         "",
+				LogLevel:        "debug",
+				FileStoragePath: "",
+				DatabaseDSN:     "",
+				HTTPS:           false,
+				ConfigPath:      path.Join(tmpDir, "config4.json"),
+				TrustedSubnet: TrustedSubnet{
+					Data: &net.IPNet{
+						IP:   net.IP([]byte{0x7f, 0x0, 0x0, 0x0}),
+						Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
+					},
+				},
+			},
+			envVars: map[string]string{
+				"SERVER_ADDRESS": "localhost3:1010",
+				"HOST":           "fake_host",
+				"PORT":           "9999",
+				"-":              "9999",
+				"CONFIG":         path.Join(tmpDir, "config4.json"),
+			},
+			args: []string{
+				"-a=localhost1:9090",
+				"-s=0",
+				"-t=127.0.0.1/24",
+			},
+			configPath:    path.Join(tmpDir, "config4.json"),
+			configDataEnv: `{"log_level":"debug","server_address":"localhost2:8081","enable_https":true,"trusted_subnet":"192.0.0.0/24"}`,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// Очистка состояния
 			resetFlags()
-			unsetEnvVars()
 
 			if len(test.envVars) != 0 {
 				for k := range test.envVars {
 					t.Setenv(k, test.envVars[k])
 				}
 			}
+			confTestData := ""
 			if len(test.configData) != 0 {
-				err = os.WriteFile(test.configPath, []byte(test.configData), 0600)
-				require.NoError(t, err)
+				confTestData = test.configData
 				test.args = append(test.args, "-config", test.configPath)
+			}
+			if len(test.configDataEnv) != 0 {
+				confTestData = test.configDataEnv
+			}
+			if len(confTestData) != 0 {
+				err = os.WriteFile(test.configPath, []byte(confTestData), 0600)
+				require.NoError(t, err)
 			}
 			// Установка аргументов командной строки
 			os.Args = append([]string{"cmd"}, test.args...)
@@ -303,7 +338,6 @@ func TestURL(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			resetFlags()
-			unsetEnvVars()
 			if len(test.envVars) != 0 {
 				for k := range test.envVars {
 					t.Setenv(k, test.envVars[k])

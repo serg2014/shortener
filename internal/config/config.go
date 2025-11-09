@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/caarlos0/env/v6"
+	"github.com/caarlos0/env/v11"
 )
 
 var (
@@ -21,11 +21,13 @@ var (
 )
 
 // TrustedSubnet own type net.IPNet
-type TrustedSubnet net.IPNet
+type TrustedSubnet struct {
+	data *net.IPNet
+}
 
 // String flag.Value interface for type TrustedSubnet
 func (tsn *TrustedSubnet) String() string {
-	n := (*net.IPNet)(tsn)
+	n := (*net.IPNet)(tsn.data)
 	return n.String()
 }
 
@@ -35,7 +37,7 @@ func (tsn *TrustedSubnet) Set(val string) error {
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrParseCIDR, err)
 	}
-	*tsn = (TrustedSubnet)(*net)
+	*tsn = TrustedSubnet{data: net}
 	return nil
 }
 
@@ -163,24 +165,26 @@ func (c *config) InitConfig() error {
 	flag.Var(&c.TrustedSubnet, "t", "trusted subnet like (192.168.1.0/24)")
 	flag.Parse()
 
-	err := env.ParseWithFuncs(
+	err := env.ParseWithOptions(
 		c,
-		map[reflect.Type]env.ParserFunc{
-			reflect.TypeOf(TrustedSubnet{}): func(val string) (any, error) {
-				tsn := TrustedSubnet{}
-				err := tsn.Set(val)
-				if err != nil {
-					return tsn, fmt.Errorf("%w: %w", ErrParseCIDR, err)
-				}
-				return tsn, nil
-			},
-			reflect.TypeOf(ServerAddress{}): func(val string) (any, error) {
-				sa := ServerAddress{}
-				err := sa.Set(val)
-				if err != nil {
-					return nil, err
-				}
-				return sa, nil
+		env.Options{
+			FuncMap: map[reflect.Type]env.ParserFunc{
+				reflect.TypeOf(TrustedSubnet{}): func(val string) (any, error) {
+					tsn := TrustedSubnet{}
+					err := tsn.Set(val)
+					if err != nil {
+						return tsn, fmt.Errorf("%w: %w", ErrParseCIDR, err)
+					}
+					return tsn, nil
+				},
+				reflect.TypeOf(ServerAddress{}): func(val string) (any, error) {
+					sa := ServerAddress{}
+					err := sa.Set(val)
+					if err != nil {
+						return nil, err
+					}
+					return sa, nil
+				},
 			},
 		},
 	)

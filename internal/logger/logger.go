@@ -101,8 +101,8 @@ func WithLogging(h http.Handler) http.Handler {
 			zap.Int("status", responseData.status),
 			zap.Int("size", responseData.size),
 			zap.String("userID", string(userID)),
+			zap.String("IP", r.Header.Get("X-Real-IP")),
 		)
-
 	}
 	// возвращаем функционально расширенный хендлер
 	return http.HandlerFunc(logFn)

@@ -55,7 +55,7 @@ func main() {
 }
 
 // Router set up routes and return chi.Router
-func Router(a *app.MyApp) chi.Router {
+func Router(a *app.MyApp, trustedNet config.TrustedSubnet) chi.Router {
 	r := chi.NewRouter()
 	r.Route("/debug", func(r chi.Router) {
 		// add pprof
@@ -73,7 +73,7 @@ func Router(a *app.MyApp) chi.Router {
 		r.Use(gzipMiddleware(pool))
 
 		r.Group(func(r chi.Router) {
-			r.Use(TrustedNetsMiddleware)
+			r.Use(TrustedNetsMiddleware(trustedNet))
 			r.Get("/api/internal/stats", handlers.InternalStats(a))
 
 		})
@@ -113,7 +113,7 @@ func run() error {
 
 	srv := http.Server{
 		Addr:    config.Config.ServerAddress.String(),
-		Handler: Router(app),
+		Handler: Router(app, config.Config.TrustedSubnet),
 	}
 
 	var wg sync.WaitGroup

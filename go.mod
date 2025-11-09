@@ -5,7 +5,7 @@ go 1.24.1
 replace github.com/serg2014/shortener => ./
 
 require (
-	github.com/caarlos0/env/v6 v6.10.1
+	github.com/caarlos0/env/v11 v11.3.1
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/golang/mock v1.6.0
 	github.com/jackc/pgx/v5 v5.7.5

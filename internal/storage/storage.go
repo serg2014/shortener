@@ -134,6 +134,17 @@ func (s *storage) DeleteUserURLS(ctx context.Context, req models.RequestForDelet
 	return nil
 }
 
+// InternalStats get stat
+func (s *storage) InternalStats(ctx context.Context) (*models.InternalStats, error) {
+	s.m.RLock()
+	defer s.m.RUnlock()
+
+	return &models.InternalStats{
+		Urls:  uint(len(s.short2orig)),
+		Users: uint(len(s.users)),
+	}, nil
+}
+
 // Storager interface
 type Storager interface {
 	Get(ctx context.Context, key string) (string, bool, error)
@@ -144,4 +155,5 @@ type Storager interface {
 	Close() error
 	Ping(ctx context.Context) error
 	DeleteUserURLS(ctx context.Context, req models.RequestForDeleteURLS, userID string) error
+	InternalStats(ctx context.Context) (*models.InternalStats, error)
 }

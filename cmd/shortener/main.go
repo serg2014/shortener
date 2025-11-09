@@ -55,7 +55,7 @@ func main() {
 }
 
 // Router set up routes and return chi.Router
-func Router(a *app.MyApp) chi.Router {
+func Router(a *app.MyApp, trustedNet config.TrustedSubnet) chi.Router {
 	r := chi.NewRouter()
 	r.Route("/debug", func(r chi.Router) {
 		// add pprof
@@ -70,16 +70,24 @@ func Router(a *app.MyApp) chi.Router {
 
 	r.Route("/", func(r chi.Router) {
 		r.Use(logger.WithLogging)
-		r.Use(auth.AuthMiddleware)
 		r.Use(gzipMiddleware(pool))
 
-		r.Post("/", handlers.CreateURL(a))
-		r.Get("/{key}", handlers.GetURL(a))
-		r.Post("/api/shorten", handlers.CreateURLJson(a))
-		r.Get("/ping", handlers.Ping(a))
-		r.Post("/api/shorten/batch", handlers.CreateURLBatch(a))
-		r.Get("/api/user/urls", handlers.GetUserURLS(a))
-		r.Delete("/api/user/urls", handlers.DeleteUserURLS(a))
+		r.Group(func(r chi.Router) {
+			r.Use(TrustedNetsMiddleware(trustedNet))
+			r.Get("/api/internal/stats", handlers.InternalStats(a))
+
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(auth.AuthMiddleware)
+
+			r.Post("/", handlers.CreateURL(a))
+			r.Get("/{key}", handlers.GetURL(a))
+			r.Post("/api/shorten", handlers.CreateURLJson(a))
+			r.Get("/ping", handlers.Ping(a))
+			r.Post("/api/shorten/batch", handlers.CreateURLBatch(a))
+			r.Get("/api/user/urls", handlers.GetUserURLS(a))
+			r.Delete("/api/user/urls", handlers.DeleteUserURLS(a))
+		})
 	})
 	return r
 }
@@ -104,8 +112,8 @@ func run() error {
 	app := app.NewApp(store, nil)
 
 	srv := http.Server{
-		Addr:    fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port),
-		Handler: Router(app),
+		Addr:    config.Config.ServerAddress.String(),
+		Handler: Router(app, config.Config.TrustedSubnet),
 	}
 
 	var wg sync.WaitGroup
@@ -148,9 +156,9 @@ func run() error {
 	}()
 
 	logger.Log.Info("Try running server",
-		zap.String("address", config.Config.String()),
+		zap.String("address", config.Config.ServerAddress.String()),
 		zap.String("storage", fmt.Sprintf("%T", store)),
-		zap.Boolp("https", config.Config.HTTPS),
+		zap.Bool("https", config.Config.HTTPS),
 	)
 	err = ListenAndServe(&srv, config.Config.HTTPS)
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -166,9 +174,9 @@ func run() error {
 }
 
 // ListenAndServe - srv.ListenAndServe or srv.ListenAndServeTLS
-func ListenAndServe(srv *http.Server, isHTTPS *bool) error {
+func ListenAndServe(srv *http.Server, isHTTPS bool) error {
 	// http
-	if isHTTPS == nil || !*isHTTPS {
+	if !isHTTPS {
 		return srv.ListenAndServe()
 	}
 	// https

@@ -36,7 +36,7 @@ func TestIsTrusted(t *testing.T) {
 		{
 			name: "trusted net defined. ip empty",
 			trustedSubNet: TrustedSubnet{
-				data: &net.IPNet{
+				Data: &net.IPNet{
 					IP:   net.IP([]byte{0x7f, 0x0, 0x0, 0x0}),
 					Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
 				},
@@ -47,7 +47,7 @@ func TestIsTrusted(t *testing.T) {
 		{
 			name: "trusted net defined. ip not valid",
 			trustedSubNet: TrustedSubnet{
-				data: &net.IPNet{
+				Data: &net.IPNet{
 					IP:   net.IP([]byte{0x7f, 0x0, 0x0, 0x0}),
 					Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
 				},
@@ -58,7 +58,7 @@ func TestIsTrusted(t *testing.T) {
 		{
 			name: "trusted net defined. ip valid not trusted",
 			trustedSubNet: TrustedSubnet{
-				data: &net.IPNet{
+				Data: &net.IPNet{
 					IP:   net.IP([]byte{0x7f, 0x0, 0x0, 0x0}),
 					Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
 				},
@@ -69,7 +69,7 @@ func TestIsTrusted(t *testing.T) {
 		{
 			name: "trusted net defined. ip valid and trusted",
 			trustedSubNet: TrustedSubnet{
-				data: &net.IPNet{
+				Data: &net.IPNet{
 					IP:   net.IP([]byte{0x7f, 0x0, 0x0, 0x0}),
 					Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
 				},

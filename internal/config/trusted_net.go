@@ -13,12 +13,12 @@ var (
 
 // TrustedSubnet own type net.IPNet
 type TrustedSubnet struct {
-	data *net.IPNet
+	Data *net.IPNet
 }
 
 // String flag.Value interface for type TrustedSubnet
 func (tsn *TrustedSubnet) String() string {
-	n := (*net.IPNet)(tsn.data)
+	n := (*net.IPNet)(tsn.Data)
 	return n.String()
 }
 
@@ -28,7 +28,7 @@ func (tsn *TrustedSubnet) Set(val string) error {
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrParseCIDR, err)
 	}
-	*tsn = TrustedSubnet{data: net}
+	*tsn = TrustedSubnet{Data: net}
 	return nil
 }
 
@@ -45,9 +45,9 @@ func (tsn *TrustedSubnet) UnmarshalJSON(data []byte) error {
 
 // IsTrusted check ip in trusted net
 func (tsn *TrustedSubnet) IsTrusted(ip string) bool {
-	if tsn.data == nil {
+	if tsn.Data == nil {
 		return false
 	}
 	pip := net.ParseIP(ip)
-	return pip != nil && tsn.data.Contains(pip)
+	return pip != nil && tsn.Data.Contains(pip)
 }

@@ -60,7 +60,7 @@ func TestInitConfig(t *testing.T) {
 				DatabaseDSN:     "",
 				HTTPS:           false,
 				TrustedSubnet: TrustedSubnet{
-					data: nil,
+					Data: nil,
 				},
 			},
 			envVars: make(map[string]string),
@@ -79,7 +79,7 @@ func TestInitConfig(t *testing.T) {
 				DatabaseDSN:     "dsn",
 				HTTPS:           true,
 				TrustedSubnet: TrustedSubnet{
-					data: &net.IPNet{
+					Data: &net.IPNet{
 						IP:   net.IP([]byte{0xc0, 0xa8, 0x01, 0x0}),
 						Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
 					},
@@ -109,7 +109,7 @@ func TestInitConfig(t *testing.T) {
 				DatabaseDSN:     "dsn",
 				HTTPS:           true,
 				TrustedSubnet: TrustedSubnet{
-					data: &net.IPNet{
+					Data: &net.IPNet{
 						IP:   net.IP([]byte{0x7f, 0x0, 0x0, 0x0}),
 						Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
 					},
@@ -139,7 +139,7 @@ func TestInitConfig(t *testing.T) {
 				DatabaseDSN:     "dsn-env",
 				HTTPS:           false,
 				TrustedSubnet: TrustedSubnet{
-					data: &net.IPNet{
+					Data: &net.IPNet{
 						IP:   net.IP([]byte{0xc0, 0xa8, 0x01, 0x0}),
 						Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
 					},
@@ -178,7 +178,7 @@ func TestInitConfig(t *testing.T) {
 				HTTPS:           true,
 				ConfigPath:      path.Join(tmpDir, "config1.json"),
 				TrustedSubnet: TrustedSubnet{
-					data: &net.IPNet{
+					Data: &net.IPNet{
 						IP:   net.IP([]byte{0xc0, 0x0, 0x0, 0x0}),
 						Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
 					},
@@ -222,7 +222,7 @@ func TestInitConfig(t *testing.T) {
 				HTTPS:           false,
 				ConfigPath:      path.Join(tmpDir, "config3.json"),
 				TrustedSubnet: TrustedSubnet{
-					data: &net.IPNet{
+					Data: &net.IPNet{
 						IP:   net.IP([]byte{0x7f, 0x0, 0x0, 0x0}),
 						Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
 					},

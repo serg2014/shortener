@@ -132,6 +132,7 @@ func run() error {
 	grpcSrv := grpc.NewServer(
 		// Chain interceptors
 		grpc.ChainUnaryInterceptor(
+			loggerInterceptor,
 			trustedInterceptor,
 		),
 	)

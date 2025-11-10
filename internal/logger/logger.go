@@ -2,12 +2,16 @@
 package logger
 
 import (
+	"context"
 	"net/http"
 	"time"
 
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 
 	"github.com/serg2014/shortener/internal/auth"
+	"github.com/serg2014/shortener/internal/logger"
 )
 
 // Log будет доступен всему коду как синглтон.
@@ -106,4 +110,32 @@ func WithLogging(h http.Handler) http.Handler {
 	}
 	// возвращаем функционально расширенный хендлер
 	return http.HandlerFunc(logFn)
+}
+
+// loggerInterceptor
+func loggerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	// выполняем действия перед вызовом метода
+	start := time.Now()
+	// Возвращаем ответ и ошибку от фактического обработчика
+	resp, err := handler(ctx, req)
+	duration := time.Since(start)
+
+	// отправляем сведения о запросе в zap
+	userID, errUser := auth.GetUserID(ctx)
+	if errUser != nil {
+		userID = ""
+	}
+
+	status := status.Convert(err)
+	logger.Log.Info(
+		"got gRPC request",
+		zap.String("method", info.FullMethod),
+		zap.Duration("duration", duration),
+		zap.Int("status", int(status.Code())),
+		// TODO is it really need?
+		// zap.Int("size", responseData.size),
+		zap.String("userID", string(userID)),
+		zap.String("IP", getIP(ctx)),
+	)
+	return resp, err
 }

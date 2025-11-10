@@ -20,26 +20,28 @@ type GrpcServer struct {
 	app *app.MyApp
 }
 
-func trustedInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-	if info.FullMethod == "/shortener.ShortenerService/InternalStats" {
-		trust := false
-		// выполняем действия перед вызовом метода
-		md, ok := metadata.FromIncomingContext(ctx)
-		if ok {
-			values := md.Get("X-Real-IP")
-			if len(values) > 0 {
-				// ключ содержит слайс строк, получаем первую строку
-				ip := values[0]
-				trust = config.Config.TrustedSubnet.IsTrusted(ip)
-			}
+func getIP(ctx context.Context) string {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		values := md.Get("X-Real-IP")
+		if len(values) > 0 {
+			// ключ содержит слайс строк, получаем первую строку
+			return values[0]
 		}
+	}
+	return ""
+}
+
+func trustedInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	// выполняем действия перед вызовом метода
+	if info.FullMethod == "/shortener.ShortenerService/InternalStats" {
+		trust := config.Config.TrustedSubnet.IsTrusted(getIP(ctx))
 		if !trust {
 			code := codes.PermissionDenied
 			return nil, status.Error(code, code.String())
-
 		}
 	}
-	// Возвращать ответ и ошибку от фактического обработчика
+	// Возвращаем ответ и ошибку от фактического обработчика
 	return handler(ctx, req)
 }
 

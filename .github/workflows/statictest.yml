@@ -43,6 +43,7 @@ jobs:
       
       - name: Add protoc to PATH
         run: echo "$PWD/protoc/bin" >> $GITHUB_PATH
+      # arduino require unzip
       # - name: Install Protoc
       #   uses: arduino/setup-protoc@v3 # Or Noelware/setup-protoc@v1
       #   with:

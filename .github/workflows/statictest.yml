@@ -32,14 +32,17 @@ jobs:
         run: |
           # Пример для Linux/macOS
           # wget https://github.com/protocolbuffers/protobuf/releases/download/v<версия>/protoc-<версия>-linux-x86_64.zip
-          curl https://github.com/protocolbuffers/protobuf/releases/download/v33.0/protoc-33.0-linux-x86_64.zip
+          # curl https://github.com/protocolbuffers/protobuf/releases/download/v33.0/protoc-33.0-linux-x86_64.zip
+          PB_REL="https://github.com/protocolbuffers/protobuf/releases"
+          curl -LO $PB_REL/download/v33.2/protoc-33.0-linux-x86_64.zip
+
           # unzip protoc-33.0-linux-x86_64.zip -d protoc
           pwd
           ls -la
       
       - uses: montudor/action-zip@v1
         with:
-          args: pwd && ls -la && unzip -qq protoc-33.0-linux-x86_64.zip -d protoc
+          args: unzip -qq protoc-33.0-linux-x86_64.zip -d protoc
 
       - name: Add protoc to PATH
         run: echo "$PWD/protoc/bin" >> $GITHUB_PATH

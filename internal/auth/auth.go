@@ -163,9 +163,7 @@ func AuthInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, h
 		userID, err := GetUserIDFromMeta(ctx)
 		if err != nil {
 			userID = generateUserID()
-			//setCookieUserToMeta(ctx, userID)
-			md := metadata.New(map[string]string{MetaUserName: createToken(userID)})
-			ctx = metadata.NewOutgoingContext(ctx, md)
+			ctx = metadata.AppendToOutgoingContext(ctx, MetaUserName, createToken(userID))
 		}
 
 		// сохраним в контекст

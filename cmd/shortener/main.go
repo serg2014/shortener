@@ -135,6 +135,7 @@ func run() error {
 			logger.LoggerInterceptor,
 			trustedInterceptor(config.Config.TrustedSubnet),
 			auth.AuthInterceptor,
+			metadataInterceptor,
 		),
 	)
 	// регистрируем сервис

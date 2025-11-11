@@ -28,6 +28,11 @@ jobs:
           chmod -R +x $GITHUB_WORKSPACE/.tools/statictest
           mv $GITHUB_WORKSPACE/.tools/statictest /usr/local/bin/statictest
 
+      - name: Setup go deps
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
       - name: Build proto
         run: |
           cd cmd/shortener

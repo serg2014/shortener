@@ -98,3 +98,73 @@ func (s *GrpcServer) GetURL(ctx context.Context, request *pb.GetURLRequest) (*pb
 
 	return &pb.GetURLResponse{Url: origURL}, nil
 }
+
+func (s *GrpcServer) ShortURLS(ctx context.Context, request *pb.ShortURLSRequest) (*pb.ShortURLSResponse, error) {
+	userID, err := auth.GetUserID(ctx)
+	if err != nil {
+		logger.Log.Error("can not find userid", zap.Error(err))
+		code := codes.Internal
+		return nil, status.Error(code, code.String())
+	}
+
+	// TODO проверить что прислали урл. correlation_id должен быть уникальным
+	req := models.RequestBatch{}
+	for _, pbItem := range request.Items {
+		// TODO выделить памяти столько, сколько надо
+		req = append(req, models.RequestBatchItem{CorrelationID: pbItem.CorrelationId, OriginalURL: pbItem.OriginalUrl})
+	}
+
+	resp, err := s.app.GenerateShortURLBatch(ctx, req, userID)
+	if err != nil {
+		logger.Log.Error(
+			"can not generate short batch",
+			zap.Error(err),
+		)
+		code := codes.Internal
+		return nil, status.Error(code, code.String())
+	}
+
+	response := pb.ShortURLSResponse{
+		Items: make([]*pb.ShortURLSResponse_Item, len(resp)),
+	}
+	for i := range resp {
+		response.Items[i] = &pb.ShortURLSResponse_Item{
+			CorrelationId: resp[i].CorrelationID,
+			ShortUrl:      resp[i].ShortURL,
+		}
+	}
+	return &response, nil
+}
+
+func (s *GrpcServer) GetUserURLS(ctx context.Context, request *pb.GetUserURLSRequest) (*pb.GetUserURLSResponse, error) {
+	userID, err := auth.GetUserID(ctx)
+	if err != nil {
+		logger.Log.Error("can not find userid", zap.Error(err))
+		code := codes.Internal
+		return nil, status.Error(code, code.String())
+	}
+	data, err := s.app.GetUserURLS(ctx, userID)
+	if err != nil {
+		logger.Log.Error("GetUserURLS", zap.Error(err))
+		code := codes.Internal
+		return nil, status.Error(code, code.String())
+	}
+	if len(data) == 0 {
+		// code := http.StatusNoContent
+		// http.Error(w, http.StatusText(code), code)
+		// TODO
+		code := codes.Internal
+		return nil, status.Error(code, code.String())
+	}
+
+	response := pb.GetUserURLSResponse{
+		Items: make([]*pb.GetUserURLSResponse_Item, len(data)),
+	}
+	for i := range data {
+		response.Items[i] = &pb.GetUserURLSResponse_Item{
+			OriginalUrl: data[i].OriginalURL,
+			ShortUrl:    data[i].ShortURL,
+		}
+	}
+	return &response, nil
+}

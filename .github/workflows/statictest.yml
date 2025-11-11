@@ -28,6 +28,8 @@ jobs:
           chmod -R +x $GITHUB_WORKSPACE/.tools/statictest
           mv $GITHUB_WORKSPACE/.tools/statictest /usr/local/bin/statictest
 
+      - name: unzip
+        uses: montudor/action-zip@v1
       - name: Install Protoc
         uses: arduino/setup-protoc@v3 # Or Noelware/setup-protoc@v1
         with:

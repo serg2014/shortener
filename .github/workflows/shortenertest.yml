@@ -52,6 +52,8 @@ jobs:
           mv $GITHUB_WORKSPACE/.tools/shortenertestbeta /usr/local/bin/shortenertestbeta
           mv $GITHUB_WORKSPACE/.tools/random /usr/local/bin/random
 
+      - name: unzip
+        uses: montudor/action-zip@v1
       - name: Install Protoc
         uses: arduino/setup-protoc@v3 # Or Noelware/setup-protoc@v1
         with:

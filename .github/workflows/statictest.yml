@@ -28,6 +28,8 @@ jobs:
           chmod -R +x $GITHUB_WORKSPACE/.tools/statictest
           mv $GITHUB_WORKSPACE/.tools/statictest /usr/local/bin/statictest
 
+      - name: Install zip
+        uses: montudor/action-zip@v1
       - name: Download protoc
         run: |
           # Пример для Linux/macOS
@@ -39,10 +41,11 @@ jobs:
           # unzip protoc-33.0-linux-x86_64.zip -d protoc
           pwd
           ls -la
+          unzip protoc-33.0-linux-x86_64.zip -d protoc
       
-      - uses: montudor/action-zip@v1
-        with:
-          args: unzip -qq protoc-33.0-linux-x86_64.zip -d protoc
+      # - uses: montudor/action-zip@v1
+      #   with:
+      #     args: unzip -qq $GITHUB_WORKSPACE/protoc-33.0-linux-x86_64.zip -d $GITHUB_WORKSPACE/protoc
 
       - name: Add protoc to PATH
         run: echo "$PWD/protoc/bin" >> $GITHUB_PATH

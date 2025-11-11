@@ -18,6 +18,10 @@ cmd/shortener/shortener
 cmd/shortener/shortenertest*
 cmd/shortener/statictest*
 
+# autogenereted proto
+cmd/shortener/proto/short.pb.go
+cmd/shortener/proto/short_grpc.pb.go
+
 # Dependency directories (remove the comment below to include it)
 vendor/
 

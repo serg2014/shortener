@@ -15,6 +15,7 @@ import (
 	"github.com/serg2014/shortener/internal/app"
 	appmock "github.com/serg2014/shortener/internal/app/mock"
 	"github.com/serg2014/shortener/internal/auth"
+	"github.com/serg2014/shortener/internal/config"
 	"github.com/serg2014/shortener/internal/storage"
 	"github.com/serg2014/shortener/internal/storage/mock"
 )
@@ -40,7 +41,7 @@ func TestGetURL(t *testing.T) {
 	require.NoError(t, err)
 
 	a := app.NewApp(store, nil)
-	ts := httptest.NewServer(Router(a))
+	ts := httptest.NewServer(Router(a, config.TrustedSubnet{}))
 	defer ts.Close()
 
 	type want struct {
@@ -146,7 +147,7 @@ func TestCreateURL(t *testing.T) {
 	require.NoError(t, err)
 
 	a := app.NewApp(store, nil)
-	ts := httptest.NewServer(Router(a))
+	ts := httptest.NewServer(Router(a, config.TrustedSubnet{}))
 	defer ts.Close()
 
 	type want struct {
@@ -297,7 +298,7 @@ func Test_CreateURL_database(t *testing.T) {
 	store := mock.NewMockStorager(ctrl)
 	gen := appmock.NewMockGenerator(ctrl)
 	a := app.NewApp(store, gen)
-	ts := httptest.NewServer(Router(a))
+	ts := httptest.NewServer(Router(a, config.TrustedSubnet{}))
 	defer ts.Close()
 
 	// отключить принудительное выставление content-encoding: gzip
@@ -463,7 +464,7 @@ func TestGetURL_database(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	store := mock.NewMockStorager(ctrl)
 	a := app.NewApp(store, nil)
-	ts := httptest.NewServer(Router(a))
+	ts := httptest.NewServer(Router(a, config.TrustedSubnet{}))
 	defer ts.Close()
 
 	// отключить принудительное выставление content-encoding: gzip
@@ -543,7 +544,7 @@ func TestCreateURLJson_database(t *testing.T) {
 	store := mock.NewMockStorager(ctrl)
 	gen := appmock.NewMockGenerator(ctrl)
 	a := app.NewApp(store, gen)
-	ts := httptest.NewServer(Router(a))
+	ts := httptest.NewServer(Router(a, config.TrustedSubnet{}))
 	defer ts.Close()
 
 	// отключить принудительное выставление content-encoding: gzip
@@ -671,7 +672,7 @@ func TestPing_database(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	store := mock.NewMockStorager(ctrl)
 	a := app.NewApp(store, nil)
-	ts := httptest.NewServer(Router(a))
+	ts := httptest.NewServer(Router(a, config.TrustedSubnet{}))
 	defer ts.Close()
 
 	// отключить принудительное выставление content-encoding: gzip
@@ -771,7 +772,7 @@ func TestCreateURLBatch_database(t *testing.T) {
 	store := mock.NewMockStorager(ctrl)
 	gen := appmock.NewMockGenerator(ctrl)
 	a := app.NewApp(store, gen)
-	ts := httptest.NewServer(Router(a))
+	ts := httptest.NewServer(Router(a, config.TrustedSubnet{}))
 	defer ts.Close()
 
 	// отключить принудительное выставление content-encoding: gzip
@@ -871,7 +872,7 @@ func TestGetUserURLS_database(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	store := mock.NewMockStorager(ctrl)
 	a := app.NewApp(store, nil)
-	ts := httptest.NewServer(Router(a))
+	ts := httptest.NewServer(Router(a, config.TrustedSubnet{}))
 	defer ts.Close()
 
 	// отключить принудительное выставление content-encoding: gzip
@@ -1002,7 +1003,7 @@ func TestDeleteUserURLS_database(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	store := mock.NewMockStorager(ctrl)
 	a := app.NewApp(store, nil)
-	ts := httptest.NewServer(Router(a))
+	ts := httptest.NewServer(Router(a, config.TrustedSubnet{}))
 	defer ts.Close()
 
 	// отключить принудительное выставление content-encoding: gzip

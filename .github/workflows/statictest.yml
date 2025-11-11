@@ -12,7 +12,7 @@ jobs:
     container: golang:1.24
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Download statictest binary
         uses: robinraju/release-downloader@v1.8
@@ -27,6 +27,33 @@ jobs:
         run: |
           chmod -R +x $GITHUB_WORKSPACE/.tools/statictest
           mv $GITHUB_WORKSPACE/.tools/statictest /usr/local/bin/statictest
+
+      - name: Download protoc and deps
+        run: |
+          # Пример для Linux/macOS
+          PB_REL="https://github.com/protocolbuffers/protobuf/releases"
+          curl -LO $PB_REL/download/v33.0/protoc-33.0-linux-x86_64.zip
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+        
+      - name: Unzip
+        uses: montudor/action-zip@v1
+        with:
+          args: unzip protoc-33.0-linux-x86_64.zip -d protoc
+      
+      - name: Add protoc to PATH
+        run: echo "$PWD/protoc/bin" >> $GITHUB_PATH
+      # arduino require unzip
+      # - name: Install Protoc
+      #   uses: arduino/setup-protoc@v3 # Or Noelware/setup-protoc@v1
+      #   with:
+      #     version: 33.x # Specify the desired version 23.x
+      #     repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build proto
+        run: |
+          cd cmd/shortener
+          go generate
 
       - name: Run statictest
         run: |

@@ -229,3 +229,15 @@ func (storage *storageDB) DeleteUserURLS(ctx context.Context, data models.Reques
 	}
 	return nil
 }
+
+// InternalStats get stat
+func (storage *storageDB) InternalStats(ctx context.Context) (*models.InternalStats, error) {
+	query := `SELECT count(short_url), count(distinct(user_id)) FROM short2orig`
+	row := storage.db.QueryRowContext(ctx, query)
+	rv := models.InternalStats{}
+	err := row.Scan(&rv.Urls, &rv.Users)
+	if err != nil {
+		return nil, err
+	}
+	return &rv, nil
+}

@@ -30,7 +30,7 @@ jobs:
 
       - name: Cache protobuf library
         id: cache-protobuf
-        uses: actions/cache@v1
+        uses: actions/cache@v4
         with:
           path: protobuf
           key: ${{ runner.os }}-protobuf

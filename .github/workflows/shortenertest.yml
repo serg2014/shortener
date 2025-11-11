@@ -55,7 +55,7 @@ jobs:
       - name: Install Protoc
         uses: arduino/setup-protoc@v3 # Or Noelware/setup-protoc@v1
         with:
-          version: 'latest' # Specify the desired version 23.x or use 'latest'
+          version: '33.x' # Specify the desired version 23.x
 
       - name: Setup go deps
         run: |

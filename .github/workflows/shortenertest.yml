@@ -52,11 +52,32 @@ jobs:
           mv $GITHUB_WORKSPACE/.tools/shortenertestbeta /usr/local/bin/shortenertestbeta
           mv $GITHUB_WORKSPACE/.tools/random /usr/local/bin/random
 
+      - name: Cache protobuf library
+        id: cache-protobuf
+        uses: actions/cache@v1
+        with:
+          path: protobuf
+          key: ${{ runner.os }}-protobuf
+      - name: Build protobuf library
+        if: steps.cache-protobuf.outputs.cache-hit != 'true'
+        run: |
+          git clone https://github.com/protocolbuffers/protobuf.git
+          cd protobuf
+          git submodule update --init --recursive
+          ./autogen.sh
+          ./autogen.sh
+          ./configure
+          make
+          make check           
+      - name: Install protobuf library
+        run: |
+          cd protobuf
+          sudo make install
+          sudo ldconfig
+
       - name: Setup go deps
         run: |
           go install golang.org/x/tools/cmd/goimports@latest
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
       - name: Build server binary
         run: |

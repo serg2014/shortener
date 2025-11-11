@@ -28,10 +28,28 @@ jobs:
           chmod -R +x $GITHUB_WORKSPACE/.tools/statictest
           mv $GITHUB_WORKSPACE/.tools/statictest /usr/local/bin/statictest
 
-      - name: Setup go deps
+      - name: Cache protobuf library
+        id: cache-protobuf
+        uses: actions/cache@v1
+        with:
+          path: protobuf
+          key: ${{ runner.os }}-protobuf
+      - name: Build protobuf library
+        if: steps.cache-protobuf.outputs.cache-hit != 'true'
         run: |
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          git clone https://github.com/protocolbuffers/protobuf.git
+          cd protobuf
+          git submodule update --init --recursive
+          ./autogen.sh
+          ./autogen.sh
+          ./configure
+          make
+          make check           
+      - name: Install protobuf library
+        run: |
+          cd protobuf
+          sudo make install
+          sudo ldconfig
 
       - name: Build proto
         run: |

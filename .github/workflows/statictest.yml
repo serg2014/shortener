@@ -28,11 +28,20 @@ jobs:
           chmod -R +x $GITHUB_WORKSPACE/.tools/statictest
           mv $GITHUB_WORKSPACE/.tools/statictest /usr/local/bin/statictest
 
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v3 # Or Noelware/setup-protoc@v1
-        with:
-          version: 33.x # Specify the desired version 23.x
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download protoc
+        run: |
+          # Пример для Linux/macOS
+          # wget https://github.com/protocolbuffers/protobuf/releases/download/v<версия>/protoc-<версия>-linux-x86_64.zip
+          curl https://github.com/protocolbuffers/protobuf/releases/download/v33.0/protoc-33.0-linux-x86_64.zip
+          unzip protoc-33.0-linux-x86_64.zip -d protoc
+
+      - name: Add protoc to PATH
+        run: echo "$PWD/protoc/bin" >> $GITHUB_PATH
+      # - name: Install Protoc
+      #   uses: arduino/setup-protoc@v3 # Or Noelware/setup-protoc@v1
+      #   with:
+      #     version: 33.x # Specify the desired version 23.x
+      #     repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build proto
         run: |

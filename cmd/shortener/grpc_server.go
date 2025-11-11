@@ -6,7 +6,9 @@ import (
 
 	pb "github.com/serg2014/shortener/cmd/shortener/proto"
 	"github.com/serg2014/shortener/internal/app"
+	"github.com/serg2014/shortener/internal/auth"
 	"github.com/serg2014/shortener/internal/logger"
+	"github.com/serg2014/shortener/internal/models"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -18,6 +20,16 @@ type GrpcServer struct {
 	pb.UnimplementedShortenerServiceServer
 
 	app *app.MyApp
+}
+
+func metadataInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	resp, err := handler(ctx, req)
+
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if ok {
+		grpc.SetTrailer(ctx, md)
+	}
+	return resp, err
 }
 
 func (s *GrpcServer) InternalStats(ctx context.Context, request *pb.InternalStatsRequest) (*pb.InternalStatsResponse, error) {
@@ -46,12 +58,20 @@ func (s *GrpcServer) Ping(ctx context.Context, request *pb.PingRequest) (*pb.Pin
 	return &pb.PingResponse{}, nil
 }
 
-func metadataInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-	resp, err := handler(ctx, req)
-
-	md, ok := metadata.FromOutgoingContext(ctx)
-	if ok {
-		grpc.SetTrailer(ctx, md)
+func (s *GrpcServer) DeleteUserURLS(ctx context.Context, request *pb.DeleteUserURLSRequest) (*pb.DeleteUserURLSResponse, error) {
+	userID, err := auth.GetUserID(ctx)
+	if err != nil {
+		logger.Log.Error("can not find userid", zap.Error(err))
+		code := codes.Internal
+		return nil, status.Error(codes.Internal, code.String())
 	}
-	return resp, err
+	req := models.RequestForDeleteURLS(request.Shorts)
+	err = s.app.DeleteUserURLS(ctx, req, userID)
+	if err != nil {
+		logger.Log.Error("can not find userid", zap.Error(err))
+		code := codes.Internal
+		return nil, status.Error(codes.Internal, code.String())
+	}
+
+	return &pb.DeleteUserURLSResponse{}, nil
 }

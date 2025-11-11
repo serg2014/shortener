@@ -36,7 +36,7 @@ jobs:
           PB_REL="https://github.com/protocolbuffers/protobuf/releases"
           curl -LO $PB_REL/download/v33.2/protoc-33.0-linux-x86_64.zip
           mkdir protoc
-          tar -xf protoc-30.2-linux-x86_64.zip -C ./protoc
+          tar -xf protoc-33.0-linux-x86_64.zip -C ./protoc
         
       # - name: Install zip
       #   uses: montudor/action-zip@v1

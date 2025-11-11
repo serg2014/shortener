@@ -31,17 +31,15 @@ jobs:
       - name: Download protoc
         run: |
           # Пример для Linux/macOS
-          # wget https://github.com/protocolbuffers/protobuf/releases/download/v<версия>/protoc-<версия>-linux-x86_64.zip
-          # curl https://github.com/protocolbuffers/protobuf/releases/download/v33.0/protoc-33.0-linux-x86_64.zip
           PB_REL="https://github.com/protocolbuffers/protobuf/releases"
           curl -LO $PB_REL/download/v33.0/protoc-33.0-linux-x86_64.zip
-          mkdir protoc
-          tar -xf protoc-33.0-linux-x86_64.zip -C ./protoc
+          # mkdir protoc
+          # tar -xf protoc-33.0-linux-x86_64.zip -C ./protoc
         
-      # - name: Install zip
-      #   uses: montudor/action-zip@v1
-      #   with:
-      #     args: unzip protoc-33.0-linux-x86_64 -d protoc
+      - name: Unzip
+        uses: montudor/action-zip@v1
+        with:
+          args: unzip protoc-33.0-linux-x86_64.zip -d protoc
       
       # - uses: montudor/action-zip@v1
       #   with:

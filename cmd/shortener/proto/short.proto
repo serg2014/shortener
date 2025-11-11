@@ -10,7 +10,6 @@ option go_package = "github.com/serg2014/shortener/cmd/shortener/proto";
 #r.Post("/api/shorten", handlers.CreateURLJson(a))
 #r.Post("/api/shorten/batch", handlers.CreateURLBatch(a))
 #r.Get("/api/user/urls", handlers.GetUserURLS(a))
-#r.Delete("/api/user/urls", handlers.DeleteUserURLS(a))
 */
 
 message InternalStatsRequest {}
@@ -27,8 +26,16 @@ message DeleteUserURLSRequest {
 }
 message DeleteUserURLSResponse {}
 
+message GetURLRequest {
+    string short = 1;
+}
+message GetURLResponse {
+    string url = 1;
+}
+
 service ShortenerService {
   rpc InternalStats(InternalStatsRequest) returns (InternalStatsResponse);
   rpc Ping(PingRequest) returns (PingResponse);
   rpc DeleteUserURLS(DeleteUserURLSRequest) returns (DeleteUserURLSResponse);
+  rpc GetURL(GetURLRequest) returns (GetURLResponse);
 }

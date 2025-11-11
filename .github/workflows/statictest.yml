@@ -28,6 +28,11 @@ jobs:
           chmod -R +x $GITHUB_WORKSPACE/.tools/statictest
           mv $GITHUB_WORKSPACE/.tools/statictest /usr/local/bin/statictest
 
+      - name: Build proto
+        run: |
+          cd cmd/shortener
+          go generate
+
       - name: Run statictest
         run: |
           go vet -vettool=$(which statictest) ./...

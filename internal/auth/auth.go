@@ -13,10 +13,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 // CookieName name of cookie fr saving userid
 const CookieName = "user_id"
+const MetaUserName = "User-ID"
 
 // TokenSep seperator for cookie value
 const TokenSep = "."
@@ -91,6 +95,27 @@ func GetUserIDFromCookie(r *http.Request) (UserID, error) {
 	return userID, nil
 }
 
+// GetUserIDFromMeta get userid from meta grpc
+func GetUserIDFromMeta(ctx context.Context) (UserID, error) {
+	value := ""
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		values := md.Get(MetaUserName)
+		if len(values) > 0 {
+			// ключ содержит слайс строк, получаем первую строку
+			value = values[0]
+		}
+	}
+	if value == "" {
+		return "", ErrCookieUserID
+	}
+	userID, err := checkToken(value)
+	if err != nil {
+		return "", err
+	}
+	return userID, nil
+}
+
 type userCtxKeyType string
 
 const userCtxKey userCtxKeyType = "userID"
@@ -128,4 +153,25 @@ func AuthMiddleware(h http.Handler) http.Handler {
 		// передаём управление хендлеру
 		h.ServeHTTP(w, r)
 	})
+}
+
+// AuthInterceptor get userid from meta grpc and save it in context.
+// Or create userid, save it into context and meta
+func AuthInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	// выполняем действия перед вызовом метода
+	if info.FullMethod != "/shortener.ShortenerService/InternalStats" {
+		userID, err := GetUserIDFromMeta(ctx)
+		if err != nil {
+			userID = generateUserID()
+			//setCookieUserToMeta(ctx, userID)
+			md := metadata.New(map[string]string{MetaUserName: createToken(userID)})
+			ctx = metadata.NewOutgoingContext(ctx, md)
+		}
+
+		// сохраним в контекст
+		ctx = WithUser(ctx, &userID)
+	}
+
+	// Возвращаем ответ и ошибку от фактического обработчика
+	return handler(ctx, req)
 }

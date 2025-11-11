@@ -132,8 +132,9 @@ func run() error {
 	grpcSrv := grpc.NewServer(
 		// Chain interceptors
 		grpc.ChainUnaryInterceptor(
-			loggerInterceptor,
-			trustedInterceptor,
+			logger.LoggerInterceptor,
+			trustedInterceptor(config.Config.TrustedSubnet),
+			auth.AuthInterceptor,
 		),
 	)
 	// регистрируем сервис

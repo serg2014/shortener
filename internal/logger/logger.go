@@ -8,10 +8,10 @@ import (
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
 	"github.com/serg2014/shortener/internal/auth"
-	"github.com/serg2014/shortener/internal/logger"
 )
 
 // Log будет доступен всему коду как синглтон.
@@ -113,7 +113,7 @@ func WithLogging(h http.Handler) http.Handler {
 }
 
 // loggerInterceptor
-func loggerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+func LoggerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 	// выполняем действия перед вызовом метода
 	start := time.Now()
 	// Возвращаем ответ и ошибку от фактического обработчика
@@ -127,7 +127,7 @@ func loggerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo,
 	}
 
 	status := status.Convert(err)
-	logger.Log.Info(
+	Log.Info(
 		"got gRPC request",
 		zap.String("method", info.FullMethod),
 		zap.Duration("duration", duration),
@@ -135,7 +135,19 @@ func loggerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo,
 		// TODO is it really need?
 		// zap.Int("size", responseData.size),
 		zap.String("userID", string(userID)),
-		zap.String("IP", getIP(ctx)),
+		zap.String("IP", GetIP(ctx)),
 	)
 	return resp, err
+}
+
+func GetIP(ctx context.Context) string {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		values := md.Get("X-Real-IP")
+		if len(values) > 0 {
+			// ключ содержит слайс строк, получаем первую строку
+			return values[0]
+		}
+	}
+	return ""
 }

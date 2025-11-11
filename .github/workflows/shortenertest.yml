@@ -53,7 +53,7 @@ jobs:
           mv $GITHUB_WORKSPACE/.tools/random /usr/local/bin/random
 
       - name: Install Protoc
-        uses: Noelware/setup-protoc@v1 # Or Noelware/setup-protoc@v1
+        uses: Noelware/setup-protoc # Or Noelware/setup-protoc@v1
         with:
           version: '33.x' # Specify the desired version 23.x
 

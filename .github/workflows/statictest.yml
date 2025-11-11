@@ -29,7 +29,7 @@ jobs:
           mv $GITHUB_WORKSPACE/.tools/statictest /usr/local/bin/statictest
 
       - name: Install Protoc
-        uses: Noelware/setup-protoc@v3 # Or Noelware/setup-protoc@v1
+        uses: Noelware/setup-protoc # Or Noelware/setup-protoc@v1
         with:
           version: '33.x' # Specify the desired version 23.x
 

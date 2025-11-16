@@ -140,6 +140,7 @@ func LoggerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo,
 	return resp, err
 }
 
+// GetIP
 func GetIP(ctx context.Context) string {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {

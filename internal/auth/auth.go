@@ -18,8 +18,10 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// CookieName name of cookie fr saving userid
+// CookieName name of cookie for saving userid
 const CookieName = "user_id"
+
+// MetaUserName name of meta for saving userid
 const MetaUserName = "User-ID"
 
 // TokenSep seperator for cookie value

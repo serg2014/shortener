@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// GrpcServer struct for grpc server
 type GrpcServer struct {
 	pb.UnimplementedShortenerServiceServer
 
@@ -34,6 +35,7 @@ func metadataInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInf
 	return resp, err
 }
 
+// InternalStats
 func (s *GrpcServer) InternalStats(ctx context.Context, request *pb.InternalStatsRequest) (*pb.InternalStatsResponse, error) {
 	data, err := s.app.InternalStats(ctx)
 	if err != nil {
@@ -48,6 +50,7 @@ func (s *GrpcServer) InternalStats(ctx context.Context, request *pb.InternalStat
 	}, nil
 }
 
+// Ping
 func (s *GrpcServer) Ping(ctx context.Context, request *pb.PingRequest) (*pb.PingResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
@@ -60,6 +63,7 @@ func (s *GrpcServer) Ping(ctx context.Context, request *pb.PingRequest) (*pb.Pin
 	return &pb.PingResponse{}, nil
 }
 
+// DeleteUserURLS
 func (s *GrpcServer) DeleteUserURLS(ctx context.Context, request *pb.DeleteUserURLSRequest) (*pb.DeleteUserURLSResponse, error) {
 	userID, err := auth.GetUserID(ctx)
 	if err != nil {
@@ -78,6 +82,7 @@ func (s *GrpcServer) DeleteUserURLS(ctx context.Context, request *pb.DeleteUserU
 	return &pb.DeleteUserURLSResponse{}, nil
 }
 
+// GetURL
 func (s *GrpcServer) GetURL(ctx context.Context, request *pb.GetURLRequest) (*pb.GetURLResponse, error) {
 	origURL, ok, err := s.app.Get(ctx, request.Short)
 	var code codes.Code
@@ -99,6 +104,7 @@ func (s *GrpcServer) GetURL(ctx context.Context, request *pb.GetURLRequest) (*pb
 	return &pb.GetURLResponse{Url: origURL}, nil
 }
 
+// ShortURLS
 func (s *GrpcServer) ShortURLS(ctx context.Context, request *pb.ShortURLSRequest) (*pb.ShortURLSResponse, error) {
 	userID, err := auth.GetUserID(ctx)
 	if err != nil {
@@ -136,6 +142,7 @@ func (s *GrpcServer) ShortURLS(ctx context.Context, request *pb.ShortURLSRequest
 	return &response, nil
 }
 
+// GetUserURLS recieve user urls
 func (s *GrpcServer) GetUserURLS(ctx context.Context, request *pb.GetUserURLSRequest) (*pb.GetUserURLSResponse, error) {
 	userID, err := auth.GetUserID(ctx)
 	if err != nil {

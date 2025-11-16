@@ -2,10 +2,14 @@
 package logger
 
 import (
+	"context"
 	"net/http"
 	"time"
 
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 
 	"github.com/serg2014/shortener/internal/auth"
 )
@@ -101,9 +105,49 @@ func WithLogging(h http.Handler) http.Handler {
 			zap.Int("status", responseData.status),
 			zap.Int("size", responseData.size),
 			zap.String("userID", string(userID)),
+			zap.String("IP", r.Header.Get("X-Real-IP")),
 		)
-
 	}
 	// возвращаем функционально расширенный хендлер
 	return http.HandlerFunc(logFn)
+}
+
+// loggerInterceptor
+func LoggerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	// выполняем действия перед вызовом метода
+	start := time.Now()
+	// Возвращаем ответ и ошибку от фактического обработчика
+	resp, err := handler(ctx, req)
+	duration := time.Since(start)
+
+	// отправляем сведения о запросе в zap
+	userID, errUser := auth.GetUserID(ctx)
+	if errUser != nil {
+		userID = ""
+	}
+
+	status := status.Convert(err)
+	Log.Info(
+		"got gRPC request",
+		zap.String("method", info.FullMethod),
+		zap.Duration("duration", duration),
+		zap.Int("status", int(status.Code())),
+		// TODO is it really need?
+		// zap.Int("size", responseData.size),
+		zap.String("userID", string(userID)),
+		zap.String("IP", GetIP(ctx)),
+	)
+	return resp, err
+}
+
+func GetIP(ctx context.Context) string {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		values := md.Get("X-Real-IP")
+		if len(values) > 0 {
+			// ключ содержит слайс строк, получаем первую строку
+			return values[0]
+		}
+	}
+	return ""
 }

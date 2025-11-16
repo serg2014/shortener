@@ -9,7 +9,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-
 	models "github.com/serg2014/shortener/internal/models"
 	storage "github.com/serg2014/shortener/internal/storage"
 )
@@ -110,6 +109,21 @@ func (m *MockStorager) GetUserURLS(ctx context.Context, userID string) ([]storag
 func (mr *MockStoragerMockRecorder) GetUserURLS(ctx, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserURLS", reflect.TypeOf((*MockStorager)(nil).GetUserURLS), ctx, userID)
+}
+
+// InternalStats mocks base method.
+func (m *MockStorager) InternalStats(ctx context.Context) (*models.InternalStats, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalStats", ctx)
+	ret0, _ := ret[0].(*models.InternalStats)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// InternalStats indicates an expected call of InternalStats.
+func (mr *MockStoragerMockRecorder) InternalStats(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalStats", reflect.TypeOf((*MockStorager)(nil).InternalStats), ctx)
 }
 
 // Ping mocks base method.

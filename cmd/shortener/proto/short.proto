@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package shortener;
+
+option go_package = "github.com/serg2014/shortener/cmd/shortener/proto";
+
+message InternalStatsRequest {}
+message InternalStatsResponse {
+    uint32 urls = 1;
+    uint32 users = 2;
+}
+
+message PingRequest {}
+message PingResponse {}
+
+message DeleteUserURLSRequest {
+    repeated string shorts = 1;
+}
+message DeleteUserURLSResponse {}
+
+message GetURLRequest {
+    string short = 1;
+}
+message GetURLResponse {
+    string url = 1;
+}
+
+message ShortURLSRequest {
+    message Item {
+	    string correlation_id = 1;
+	    string original_url = 2;
+    }
+    repeated Item items = 1;
+}
+message ShortURLSResponse {
+    message Item {
+	    string correlation_id = 1;
+	    string short_url = 2;
+    }
+    repeated Item items = 1;
+}
+
+message GetUserURLSRequest {}
+message GetUserURLSResponse{
+    message Item {
+        string original_url = 1;
+	    string short_url = 2;
+    }
+    repeated Item items = 1;
+}
+
+service ShortenerService {
+  rpc InternalStats(InternalStatsRequest) returns (InternalStatsResponse);
+  rpc Ping(PingRequest) returns (PingResponse);
+  rpc DeleteUserURLS(DeleteUserURLSRequest) returns (DeleteUserURLSResponse);
+  rpc GetURL(GetURLRequest) returns (GetURLResponse);
+  rpc ShortURLS(ShortURLSRequest) returns (ShortURLSResponse);
+  rpc GetUserURLS(GetUserURLSRequest) returns (GetUserURLSResponse);
+}

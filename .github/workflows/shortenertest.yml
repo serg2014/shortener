@@ -35,7 +35,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Download autotests binaries
         uses: robinraju/release-downloader@v1.8
@@ -52,6 +52,22 @@ jobs:
           mv $GITHUB_WORKSPACE/.tools/shortenertestbeta /usr/local/bin/shortenertestbeta
           mv $GITHUB_WORKSPACE/.tools/random /usr/local/bin/random
 
+      - name: Download protoc and deps
+        run: |
+          # Пример для Linux/macOS
+          PB_REL="https://github.com/protocolbuffers/protobuf/releases"
+          curl -LO $PB_REL/download/v33.0/protoc-33.0-linux-x86_64.zip
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+        
+      - name: Unzip
+        uses: montudor/action-zip@v1
+        with:
+          args: unzip protoc-33.0-linux-x86_64.zip -d protoc
+      
+      - name: Add protoc to PATH
+        run: echo "$PWD/protoc/bin" >> $GITHUB_PATH
+
       - name: Setup go deps
         run: |
           go install golang.org/x/tools/cmd/goimports@latest
@@ -59,6 +75,7 @@ jobs:
       - name: Build server binary
         run: |
           cd cmd/shortener
+          go generate
           go build -buildvcs=false -o shortener
 
       - name: "Code increment #1"

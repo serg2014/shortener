@@ -17,6 +17,7 @@ import (
 	"github.com/serg2014/shortener/internal/app"
 	appmock "github.com/serg2014/shortener/internal/app/mock"
 	"github.com/serg2014/shortener/internal/auth"
+	"github.com/serg2014/shortener/internal/models"
 	"github.com/serg2014/shortener/internal/storage"
 	"github.com/serg2014/shortener/internal/storage/mock"
 )
@@ -311,7 +312,13 @@ func runTests(t *testing.T, tests []myTest, f func(a *app.MyApp) http.HandlerFun
 			body, err := io.ReadAll(result.Body)
 			require.NoError(t, err)
 			defer result.Body.Close()
-			assert.Equal(t, test.want.body, string(body))
+
+			ct := result.Header.Get("content-type")
+			if strings.HasPrefix(strings.ToLower(ct), "application/json;") {
+				assert.JSONEq(t, test.want.body, string(body))
+			} else {
+				assert.Equal(t, test.want.body, string(body))
+			}
 		})
 	}
 }
@@ -748,5 +755,63 @@ func TestGetURL(t *testing.T) {
 	}
 
 	runTests(t, tests, func(newa *app.MyApp) http.HandlerFunc { return GetURL(newa) })
+}
 
+func TestInternalStats(t *testing.T) {
+	// создадим конроллер моков и экземпляр мок-хранилища, а так же мок генерилки
+	ctrl := gomock.NewController(t)
+	store := mock.NewMockStorager(ctrl)
+	a := app.NewApp(store, nil)
+
+	tests := []myTest{
+		{
+			name: "some stat",
+			a:    a,
+			req: httptestNewRequestTest(
+				http.MethodGet,
+				"/api/internal/stats",
+				strings.NewReader(""),
+				map[string]string{},
+				"",
+			),
+			storeMock: []func() *gomock.Call{
+				func() *gomock.Call {
+					return store.EXPECT().
+						InternalStats(gomock.Any()).
+						Return(&models.InternalStats{Urls: 10, Users: 10}, nil)
+				},
+			},
+			want: want{
+				statusCode: http.StatusOK,
+				headers: headers{
+					"content-type":     "application/json; charset=utf-8",
+					"Content-Encoding": "",
+				},
+				body: `{"users":10,"urls":10}`,
+			},
+		},
+		{
+			name: "error in db",
+			a:    a,
+			req: httptestNewRequestTest(
+				http.MethodGet,
+				"/api/internal/stats",
+				strings.NewReader(""),
+				map[string]string{},
+				"",
+			),
+			storeMock: []func() *gomock.Call{
+				func() *gomock.Call {
+					return store.EXPECT().
+						InternalStats(gomock.Any()).
+						Return(nil, errors.New("some error in db"))
+				},
+			},
+			want: want{
+				statusCode: http.StatusInternalServerError,
+				body:       "Internal Server Error\n",
+			},
+		},
+	}
+	runTests(t, tests, func(newa *app.MyApp) http.HandlerFunc { return InternalStats(newa) })
 }

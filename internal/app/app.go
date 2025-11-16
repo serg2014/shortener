@@ -137,3 +137,8 @@ func (a *MyApp) Set(ctx context.Context, key, value string, userID auth.UserID) 
 func (a *MyApp) Ping(ctx context.Context) error {
 	return a.store.Ping(ctx)
 }
+
+// InternalStats get server stats
+func (a *MyApp) InternalStats(ctx context.Context) (*models.InternalStats, error) {
+	return a.store.InternalStats(ctx)
+}

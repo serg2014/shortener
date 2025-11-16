@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"net"
 	"os"
 	"path"
 	"testing"
@@ -10,19 +11,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var (
+	configTrue    = true
+	configTruePtr = &configTrue
+
+	configFalse    = false
+	configFalsePtr = &configFalse
+)
+
 // Очистка флагов
 func resetFlags() {
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-}
-
-// Очистка переменных окружения
-func unsetEnvVars() {
-	os.Unsetenv("SERVER_ADDRESS")
-	os.Unsetenv("BASE_URL")
-	os.Unsetenv("LOG_LEVEL")
-	os.Unsetenv("FILE_STORAGE_PATH")
-	os.Unsetenv("DATABASE_DSN")
-	os.Unsetenv("ENABLE_HTTPS")
 }
 
 func TestInitConfig(t *testing.T) {
@@ -31,23 +30,29 @@ func TestInitConfig(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	tests := []struct {
-		name       string
-		expect     *config
-		envVars    map[string]string
-		args       []string
-		configData string
-		configPath string
+		name          string
+		expect        *config
+		envVars       map[string]string
+		args          []string
+		configData    string
+		configDataEnv string
+		configPath    string
 	}{
 		{
 			name: "no env. no flag",
 			expect: &config{
-				Host:            "localhost",
-				Port:            8080,
+				ServerAddress: ServerAddress{
+					Host: "localhost",
+					Port: 8080,
+				},
 				BaseURL:         "",
 				LogLevel:        "info",
 				FileStoragePath: "",
 				DatabaseDSN:     "",
-				HTTPS:           nil,
+				HTTPS:           false,
+				TrustedSubnet: TrustedSubnet{
+					Data: nil,
+				},
 			},
 			envVars: make(map[string]string),
 			args:    make([]string, 0),
@@ -55,13 +60,21 @@ func TestInitConfig(t *testing.T) {
 		{
 			name: "only env",
 			expect: &config{
-				Host:            "localhost2",
-				Port:            9090,
+				ServerAddress: ServerAddress{
+					Host: "localhost2",
+					Port: 9090,
+				},
 				BaseURL:         "http://some.host/",
 				LogLevel:        "debug",
 				FileStoragePath: "/file/path",
 				DatabaseDSN:     "dsn",
-				HTTPS:           configTruePtr,
+				HTTPS:           true,
+				TrustedSubnet: TrustedSubnet{
+					Data: &net.IPNet{
+						IP:   net.IP([]byte{0xc0, 0xa8, 0x01, 0x0}),
+						Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
+					},
+				},
 			},
 			envVars: map[string]string{
 				"SERVER_ADDRESS":    "localhost2:9090",
@@ -70,19 +83,28 @@ func TestInitConfig(t *testing.T) {
 				"FILE_STORAGE_PATH": "/file/path",
 				"DATABASE_DSN":      "dsn",
 				"ENABLE_HTTPS":      "true",
+				"TRUSTED_SUBNET":    "192.168.1.0/24",
 			},
 			args: make([]string, 0),
 		},
 		{
 			name: "only flags",
 			expect: &config{
-				Host:            "localhost2",
-				Port:            9090,
+				ServerAddress: ServerAddress{
+					Host: "localhost2",
+					Port: 9090,
+				},
 				BaseURL:         "http://some.host/",
 				LogLevel:        "debug",
 				FileStoragePath: "/file/path",
 				DatabaseDSN:     "dsn",
-				HTTPS:           configTruePtr,
+				HTTPS:           true,
+				TrustedSubnet: TrustedSubnet{
+					Data: &net.IPNet{
+						IP:   net.IP([]byte{0x7f, 0x0, 0x0, 0x0}),
+						Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
+					},
+				},
 			},
 			envVars: make(map[string]string),
 			args: []string{
@@ -92,18 +114,27 @@ func TestInitConfig(t *testing.T) {
 				"-f=/file/path",
 				"-d=dsn",
 				"-s",
+				"-t=127.0.0.1/24",
 			},
 		},
 		{
 			name: "env and flags. env priority",
 			expect: &config{
-				Host:            "localhost3",
-				Port:            1010,
+				ServerAddress: ServerAddress{
+					Host: "localhost3",
+					Port: 1010,
+				},
 				BaseURL:         "http://host.some/",
 				LogLevel:        "error",
 				FileStoragePath: "/path/file",
 				DatabaseDSN:     "dsn-env",
-				HTTPS:           configFalsePtr,
+				HTTPS:           false,
+				TrustedSubnet: TrustedSubnet{
+					Data: &net.IPNet{
+						IP:   net.IP([]byte{0xc0, 0xa8, 0x01, 0x0}),
+						Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
+					},
+				},
 			},
 			envVars: map[string]string{
 				"SERVER_ADDRESS":    "localhost3:1010",
@@ -112,6 +143,7 @@ func TestInitConfig(t *testing.T) {
 				"FILE_STORAGE_PATH": "/path/file",
 				"DATABASE_DSN":      "dsn-env",
 				"ENABLE_HTTPS":      "false",
+				"TRUSTED_SUBNET":    "192.168.1.0/24",
 			},
 			args: []string{
 				"-a=localhost2:9090",
@@ -120,35 +152,46 @@ func TestInitConfig(t *testing.T) {
 				"-f=/file/path",
 				"-d=dsn",
 				"-s",
+				"-t=127.0.0.1/24",
 			},
 		},
 		{
 			name: "no env. no flag. flag config",
 			expect: &config{
-				Host:            "localhost2",
-				Port:            8081,
+				ServerAddress: ServerAddress{
+					Host: "localhost2",
+					Port: 8081,
+				},
 				BaseURL:         "",
 				LogLevel:        "info",
 				FileStoragePath: "",
 				DatabaseDSN:     "",
-				HTTPS:           nil,
+				HTTPS:           true,
 				ConfigPath:      path.Join(tmpDir, "config1.json"),
+				TrustedSubnet: TrustedSubnet{
+					Data: &net.IPNet{
+						IP:   net.IP([]byte{0xc0, 0x0, 0x0, 0x0}),
+						Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
+					},
+				},
 			},
 			envVars:    make(map[string]string),
 			args:       make([]string, 0),
 			configPath: path.Join(tmpDir, "config1.json"),
-			configData: `{"server_address":"localhost2:8081"}`,
+			configData: `{"server_address":"localhost2:8081", "trusted_subnet":"192.0.0.0/24", "enable_https": true}`,
 		},
 		{
 			name: "no env. no flag. flag config 2",
 			expect: &config{
-				Host:            "localhost",
-				Port:            8080,
+				ServerAddress: ServerAddress{
+					Host: "localhost",
+					Port: 8080,
+				},
 				BaseURL:         "",
 				LogLevel:        "debug",
 				FileStoragePath: "",
 				DatabaseDSN:     "",
-				HTTPS:           nil,
+				HTTPS:           false,
 				ConfigPath:      path.Join(tmpDir, "config2.json"),
 			},
 			envVars:    make(map[string]string),
@@ -159,41 +202,94 @@ func TestInitConfig(t *testing.T) {
 		{
 			name: "env. flag. flag config 3",
 			expect: &config{
-				Host:            "localhost3",
-				Port:            1010,
+				ServerAddress: ServerAddress{
+					Host: "localhost3",
+					Port: 1010,
+				},
 				BaseURL:         "",
 				LogLevel:        "debug",
 				FileStoragePath: "",
 				DatabaseDSN:     "",
-				HTTPS:           configFalsePtr,
+				HTTPS:           false,
 				ConfigPath:      path.Join(tmpDir, "config3.json"),
+				TrustedSubnet: TrustedSubnet{
+					Data: &net.IPNet{
+						IP:   net.IP([]byte{0x7f, 0x0, 0x0, 0x0}),
+						Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
+					},
+				},
 			},
 			envVars: map[string]string{
 				"SERVER_ADDRESS": "localhost3:1010",
+				"HOST":           "fake_host",
+				"PORT":           "9999",
+				"-":              "9999",
 			},
 			args: []string{
 				"-a=localhost1:9090",
 				"-s=0",
+				"-t=127.0.0.1/24",
 			},
 			configPath: path.Join(tmpDir, "config3.json"),
-			configData: `{"log_level":"debug","server_address":"localhost2:8081","enable_https":true}`,
+			configData: `{"log_level":"debug","server_address":"localhost2:8081","enable_https":true,"trusted_subnet":"192.0.0.0/24"}`,
+		},
+		{
+			name: "env. flag. env config",
+			expect: &config{
+				ServerAddress: ServerAddress{
+					Host: "localhost3",
+					Port: 1010,
+				},
+				BaseURL:         "",
+				LogLevel:        "debug",
+				FileStoragePath: "",
+				DatabaseDSN:     "",
+				HTTPS:           false,
+				ConfigPath:      path.Join(tmpDir, "config4.json"),
+				TrustedSubnet: TrustedSubnet{
+					Data: &net.IPNet{
+						IP:   net.IP([]byte{0x7f, 0x0, 0x0, 0x0}),
+						Mask: net.IPMask([]byte{0xff, 0xff, 0xff, 0x0}),
+					},
+				},
+			},
+			envVars: map[string]string{
+				"SERVER_ADDRESS": "localhost3:1010",
+				"HOST":           "fake_host",
+				"PORT":           "9999",
+				"-":              "9999",
+				"CONFIG":         path.Join(tmpDir, "config4.json"),
+			},
+			args: []string{
+				"-a=localhost1:9090",
+				"-s=0",
+				"-t=127.0.0.1/24",
+			},
+			configPath:    path.Join(tmpDir, "config4.json"),
+			configDataEnv: `{"log_level":"debug","server_address":"localhost2:8081","enable_https":true,"trusted_subnet":"192.0.0.0/24"}`,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// Очистка состояния
 			resetFlags()
-			unsetEnvVars()
 
 			if len(test.envVars) != 0 {
 				for k := range test.envVars {
 					t.Setenv(k, test.envVars[k])
 				}
 			}
+			confTestData := ""
 			if len(test.configData) != 0 {
-				err = os.WriteFile(test.configPath, []byte(test.configData), 0600)
-				require.NoError(t, err)
+				confTestData = test.configData
 				test.args = append(test.args, "-config", test.configPath)
+			}
+			if len(test.configDataEnv) != 0 {
+				confTestData = test.configDataEnv
+			}
+			if len(confTestData) != 0 {
+				err = os.WriteFile(test.configPath, []byte(confTestData), 0600)
+				require.NoError(t, err)
 			}
 			// Установка аргументов командной строки
 			os.Args = append([]string{"cmd"}, test.args...)
@@ -242,7 +338,6 @@ func TestURL(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			resetFlags()
-			unsetEnvVars()
 			if len(test.envVars) != 0 {
 				for k := range test.envVars {
 					t.Setenv(k, test.envVars[k])
@@ -268,11 +363,13 @@ func Test_getConfigFromFile(t *testing.T) {
 			name: "do not use Port and ConfigPath from json",
 			data: `{"server_address":"localhost2:8081","base_url": "https://localhost", "log_level": "debug", "Port": 90, "enable_https": true, "ConfigPath":"test"}`,
 			expect: config{
-				Host:       "localhost2",
-				Port:       8081,
+				ServerAddress: ServerAddress{
+					Host: "localhost2",
+					Port: 8081,
+				},
 				BaseURL:    "https://localhost",
 				LogLevel:   "debug",
-				HTTPS:      configTruePtr,
+				HTTPS:      true,
 				ConfigPath: "",
 			},
 		},
